@@ -44,9 +44,9 @@ indexTaxi=1が有効なセルなのかtrue, falseで保存されている．
 
 ** makefileへのリンクを貼る
 #+BEGIN_SRC sh
-[12:39:41]hiro@hiro-VirtualBox:0_1_Preset$ pwd
-/home/hiro/Documents/Work/Taxi/Wakayama/Greedy/0_1_Preset
-[12:41:20]hiro@hiro-VirtualBox:0_1_Preset$ ln -s ./makefile_hiromoto makefile
+[12:39:41]hiro@hiro-VirtualBox:0_2_Set$ pwd
+/home/hiro/Documents/Work/Taxi/Wakayama/Greedy/0_2_Set
+[12:41:20]hiro@hiro-VirtualBox:0_2_Set$ ln -s ./makefile_hiromoto makefile
 #+END_SRC
 
 ** Source/main.cpp内で

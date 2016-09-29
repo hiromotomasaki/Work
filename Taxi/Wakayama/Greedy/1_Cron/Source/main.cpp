@@ -144,60 +144,6 @@ int main()
 	// 需要数を取得する
 	std::vector<int> vDemand(numCell, 0);
 	{
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		
 		// currentTime.xmlを取得
 		boost::posix_time::ptime cTime;
 		{
@@ -261,11 +207,9 @@ int main()
 		}
 
 		// メモ
-		// table-date-id
-		//           -startDate
-		//           -startPoint
-		//           -endDate
-		//           -endPoint
+		// table-date-startDate
+		//           -startPoint-latitude
+		//                      -longitude
 
 		// ptを解析していき需要数をカウントしていく
 		{
@@ -273,25 +217,19 @@ int main()
 			itr_first = pt.get_child( "table" ).begin();
 			itr_last = pt.get_child( "table" ).end();
 			for(it = itr_first; it != itr_last; it++) {
-				// START_POINTを取得する
-				std::string sPointStr = it->second.get<std::string>("startPoint");
-				// 空文字の除去
-				boost::trim (sPointStr);
-				// 文字列から緯度と経度の文字列を抽出
-				std::vector<std::string> v;
-				boost::algorithm::split(v, sPointStr, boost::is_any_of(","));
-				double phi = boost::lexical_cast<double>(v[0]);
-				double lambda = boost::lexical_cast<double>(v[1]);
-				// ( phi, lambda ) -> セル番号index
-				int row = calculateRowFromLatitudes( phi, gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
-				int col = calculateColFromLongitudes( lambda, gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
+				// startPointを取得
+				GeographicCoordinate gCoorHoge;
+				gCoorHoge.setPhi( it->second.get<double>("startPoint.latitude") );
+				gCoorHoge.setLambda( it->second.get<double>("startPoint.longitude") );
+				int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
+				int col = calculateColFromLongitudes( gCoorHoge.getLambda(), gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
 				int index = calculateIndexFromRowCol( row, col, numRow, numCol );
 				// 範囲外だとindex = 0になる
 				if( index != 0 ) {
 					// 有効なセルかどうか
 					bool isValid = vValid[index-1];
 					if (isValid) {
-						// START_DATEを取得する
+						// startDateを取得する
 						std::string sTimeStr = it->second.get<std::string>("startDate");
 						// 空文字の除去
 						boost::trim (sTimeStr);
@@ -344,9 +282,9 @@ int main()
 		// indexUpperThreshold.xmlに保存
 		{
 			// 設定値保存ファイル名
-			std::string fileName = "indexUpperThreshold.xml";
+			std::string fileName = "indexNotLessThanThreshold.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/result";
+			std::string fileDire = "./../Data/1_Cron/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
@@ -368,12 +306,12 @@ int main()
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
 
-				// indexUpperThreshold.xmlに保存
+		// indexUpperThreshold.xmlに保存
 		{
 			// 設定値保存ファイル名
 			std::string fileName = "indexUnderThreshold.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/result";
+			std::string fileDire = "./../Data/1_Cron/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
