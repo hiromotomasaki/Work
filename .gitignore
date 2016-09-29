@@ -1,3 +1,6 @@
 *.o
 *.d
 *~
+/Taxi/Wakayama/Greedy/Data/
+/Taxi/Wakayama/CommonData/
+
