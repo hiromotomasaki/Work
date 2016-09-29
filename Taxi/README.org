@@ -1,0 +1,76 @@
+* 環境
+** OS
+#+BEGIN_SRC sh
+[19:21:47]hiro@hiro-VirtualBox:~$ cat /etc/lsb-release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=16.04
+DISTRIB_CODENAME=xenial
+DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
+#+END_SRC
+** g++のversion
+#+BEGIN_SRC sh
+[19:21:49]hiro@hiro-VirtualBox:~$ g++ --version
+g++ (Ubuntu 5.4.0-6ubuntu1~16.04.2) 5.4.0 20160609
+Copyright (C) 2015 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#+END_SRC
+** boostの導入
+boost_1_61_0.tar.bz2をダウンンロード
+#+BEGIN_SRC sh
+[11:56:08]hiro@hiro-VirtualBox:Downloads$ tar xf boost_1_61_0.tar.bz2
+[11:56:08]hiro@hiro-VirtualBox:Downloads$ cd boost_1_61_0/
+[11:56:49]hiro@hiro-VirtualBox:boost_1_61_0$ ./bootstrap.sh
+[11:56:49]hiro@hiro-VirtualBox:boost_1_61_0$ ./b2 install -j4 --prefix=$HOME/local/boost
+#+END_SRC
+パスの設定
+#+BEGIN_SRC sh
+# boostのlibのパスの新規登録(コンパイル時にパスの指定をするならいらない)
+export LD_LIBRARY_PATH=$HOME/local/boost/lib
+#+END_SRC
+
+* 内容
+詳しくは各ディレクトリにおいてあるREADME.orgを見ること．
+最大3台のサーバーで分割して処理ができる．
+なお，今は複数のCPUに対応した記述はしていない．
+** Wakayama
+*** 構成
+**** Greedy
+**** Rational
+**** Predict
+*** 仕様
+- ピンの色は一色
+- ピンを押した時の行き先表示の赤い線はいらない
+- コントロールパネルでタクシーのオブジェクトの(表示 / 非表示)の制御をできるようにする
+- ニューラルネットワークによる需要予測の結果から需要が集中しているセルを丸で示す
+- 需要が集中しているセルをオブジェクトで示す
+- 需要が集中している場所（横5セル分の大きさ.直径1km）の中心セルをサークルで示す.サークルは大きいので他のサークルと重なることがある．そこで，以下のようにしてサークルの数を減らす．まず，生成したサークルを需要数が大きい順に並べる．次に需要数が多い順にサークルを残すか残さないか判別していく．判別の基準は予め定めておいたセルの集合の中ですでにサークルの描画が決まっているものがあるかどうかである．
+- 先ほどのサークルの中から空車のタクシーも考慮したうえ(直径2kmのサークル)で一番近いサークルを示すオブジェクトを生成する．
+*** 本番マップ
+**** 外枠
+| 最北西のlatitude | 最北西のlongitude | 最南東のlatitude | 最南東のlongitude |
+|        34.296332 |        135.061091 |        34.143423 |        135.339895 |
+**** 追加領域
+| 最北西のlatitude | 最北西のlongitude | 最南東のlatitude | 最南東のlongitude |
+|        34.284311 |        135.183871 |        34.140970 |        135.278189 |
+|        34.217739 |        135.265546 |        34.141232 |        135.311170 |
+|        34.297741 |        135.241681 |        34.223232 |        135.339878 |
+|        34.223232 |        135.339878 |        34.150343 |        135.192901 |
+|        34.296332 |        135.061091 |        34.224480 |        135.140605 |
+**** 削除領域
+| 最北西のlatitude | 最北西のlongitude | 最南東のlatitude | 最南東のlongitude |
+|        34.224480 |        135.140605 |        34.216726 |        135.090817 |
+|        34.251027 |        135.085241 |        34.217182 |        135.098910 |
+|        34.303788 |        135.083578 |        34.278084 |        135.142001 |
+|        34.301980 |        135.236779 |        34.287886 |        135.294815 |
+|        34.235600 |        135.304050 |        34.217238 |        135.348713 |
+|        34.225734 |        135.283667 |        34.203705 |        135.320705 |
+|        34.163086 |        135.279536 |        34.132188 |        135.327012 |
+|        34.180746 |        135.296754 |        34.157178 |        135.329913 |
+
+**** 追加領域
+**** 削除領域
+** Oosaka
+**** Greedy
+**** Rational
+**** Predict
