@@ -1,2 +1,31 @@
 * Workの中身
 ** Taxi
+* 更新の仕方
+** .gitignoreの書き方
+.gitignoreにはgithubにバックアップを取らないファイル・ディレクトリを書く。
+- 特定の拡張子を無視
+  + *.o
+- 特定のファイルを無視(先頭に/)
+  + /npm-debug.log
+- 特定のディレクトリを無視(先頭と末尾に/)
+  + / bin/ (/とbの間は詰める)
+*** 更新
+通常の更新は以下のコマンドを打つ．
+#+BEGIN_SRC sh
+hiro@hiro-VirtualBox:dotfiles$ git add .
+hiro@hiro-VirtualBox:dotfiles$ git commit -m 'commit'
+hiro@hiro-VirtualBox:dotfiles$ git push
+#+END_SRC
+.gitignoreによってバックアップ対象外になったファイルをgithubからの削除することも含む更新は以下のコマンドを打つ．
+#+BEGIN_SRC sh
+hiro@hiro-VirtualBox:dotfiles$ git rm --cached -r .
+hiro@hiro-VirtualBox:dotfiles$ git add -A .
+hiro@hiro-VirtualBox:dotfiles$ git commit -m "commit"
+hiro@hiro-VirtualBox:dotfiles$ git push
+#+END_SRC
+*** ウェブ上からの完全削除
+githubのページで操作すれば良い．
+*** クローン
+#+BEGIN_SRC sh
+hiro@hiro-VirtualBox:~$ git clone https://github.com/hiromotomasaki/dotfiles
+#+END_SRC
