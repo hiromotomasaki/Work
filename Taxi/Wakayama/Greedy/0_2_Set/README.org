@@ -1,5 +1,5 @@
 * ./../Data/0_2_Setの内部
-** FromViswa
+** FromServer
 手動で作成する．
 
 特に使わない．
@@ -37,7 +37,7 @@ indexTaxi=1が有効なセルなのかtrue, falseで保存されている．
 
 * 実行前にすること
 ** フォルダの作成
-./../Data/0_1_Preset/FromViswaのフォルダの作成をする．
+./../Data/0_1_Preset/FromServerのフォルダの作成をする．
 
 ** リンクを貼る
 必要な自作関数のリンクを貼る

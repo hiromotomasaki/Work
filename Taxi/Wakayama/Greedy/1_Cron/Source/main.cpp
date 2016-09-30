@@ -78,9 +78,9 @@ int main()
 	// Data/0_2_Set/InputDataFor1_Cron.xmlから読み込む
 	{
 		// 設定値読み込みファイル名
-		std::string fileName = "InputDataFor1_Cron.xml";
+		const std::string fileName = "InputDataFor1_Cron.xml";
 		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-		std::string fileDire = "./../Data/0_2_Set/Other";
+		const std::string fileDire = "./../Data/0_2_Set/Other";
 		std::string fileRela = fileDire + "/" + fileName;
 		{
 			// create an empty property tree
@@ -149,9 +149,9 @@ int main()
 		{
 			boost::property_tree::ptree pt;
 			// 設定値読み込みファイル名
-			std::string fileName = "currentTime.xml";
+			const std::string fileName = "currentTime.xml";
 			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/FromViswa";
+			const std::string fileDire = "./../Data/1_Cron/FromServer";
 			std::string fileRela = fileDire + "/" + fileName;
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
@@ -169,9 +169,9 @@ int main()
 		boost::property_tree::ptree pt;
 		{
 			// 設定値読み込みファイル名
-			std::string fileName = "data.xml";
+			const std::string fileName = "data.xml";
 			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/FromViswa";
+			const std::string fileDire = "./../Data/1_Cron/FromServer";
 			std::string fileRela = fileDire + "/" + fileName;
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
@@ -282,9 +282,9 @@ int main()
 		// indexUpperThreshold.xmlに保存
 		{
 			// 設定値保存ファイル名
-			std::string fileName = "indexNotLessThanThreshold.xml";
+			const std::string fileName = "indexNotLessThanThreshold.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/Other";
+			const std::string fileDire = "./../Data/1_Cron/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
@@ -309,9 +309,9 @@ int main()
 		// indexUpperThreshold.xmlに保存
 		{
 			// 設定値保存ファイル名
-			std::string fileName = "indexUnderThreshold.xml";
+			const std::string fileName = "indexUnderThreshold.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/Other";
+			const std::string fileDire = "./../Data/1_Cron/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree

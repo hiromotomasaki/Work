@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 		// 設定値読み込みファイル名
 		std::string fileName = "id_" + idTaxiStr + ".xml";
 		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-		std::string fileDire = "./../Data/2_ForEachRequest/FromViswa/TaxiPosition";
+		const std::string fileDire = "./../Data/2_ForEachRequest/FromServer/TaxiPosition";
 		std::string fileRela = fileDire + "/" + fileName;
 		// create an empty property tree
 		boost::property_tree::ptree pt;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 		} catch (std::exception& e) {
 			// 空のオブジェクトファイルの生成
 			try {
-				boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			} catch (std::exception& e) {
@@ -146,9 +146,9 @@ int main(int argc, char *argv[])
 	// ----------------------------------------------------- //
 	{
 		// 設定値読み込みファイル名
-		std::string fileName = "InputDataFor2_ForEachRequest.xml";
+		const std::string fileName = "InputDataFor2_ForEachRequest.xml";
 		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-		std::string fileDire = "./../Data/0_2_Set/Other";
+		const std::string fileDire = "./../Data/0_2_Set/Other";
 		std::string fileRela = fileDire + "/" + fileName;
 		{
 			// create an empty property tree
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 		// indexTaxiが営業領域の外枠外ならemptyObjectをコピーしてそのidでファイルを作成して終了
 		if (indexTaxi == 0) {
 			try {
-				boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 				return EXIT_SUCCESS;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 			// 読み込みファイル名
 			std::string fileName = boost::lexical_cast<std::string>( indexTaxi ) + ".xml";
 			// 読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/0_2_Set/Other/IsValid";
+			const std::string fileDire = "./../Data/0_2_Set/Other/IsValid";
 			std::string fileRela = fileDire + "/" + fileName;
 			{
 				// create an empty property tree
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 		}
 		if (!check) {
 			try {
-				boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 				return EXIT_SUCCESS;
@@ -280,9 +280,9 @@ int main(int argc, char *argv[])
 	{
 		{
 			// 読み込みファイル名
-			std::string fileName = "indexNotLessThanThreshold.xml";
+			const std::string fileName = "indexNotLessThanThreshold.xml";
 			// 読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/Other";
+			const std::string fileDire = "./../Data/1_Cron/Other";
 			std::string fileRela = fileDire + "/" + fileName;
 			{
 				// create an empty property tree
@@ -318,9 +318,9 @@ int main(int argc, char *argv[])
 		}
 		{
 			// 読み込みファイル名
-			std::string fileName = "indexUnderThreshold.xml";
+			const std::string fileName = "indexUnderThreshold.xml";
 			// 読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/1_Cron/Other";
+			const std::string fileDire = "./../Data/1_Cron/Other";
 			std::string fileRela = fileDire + "/" + fileName;
 			{
 				// create an empty property tree
@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 	if(!check_1 && !check_2) {
 		// 営業領域に需要が全く無い
 		try {
-			boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			return EXIT_SUCCESS;
@@ -419,7 +419,7 @@ int main(int argc, char *argv[])
 		}else{
 			// emptyObjectをコピーする
 			try {
-				boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 				return EXIT_SUCCESS;

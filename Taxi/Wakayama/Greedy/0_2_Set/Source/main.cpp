@@ -183,9 +183,9 @@ int main()
 		{
 			std::cout << "0_1_Presetで設定したファイルの読込中..." << "\n";
 			// 設定値読み込みファイル名
-			std::string fileName = "base.xml";
+			const std::string fileName = "base.xml";
 			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/0_1_Preset/Other";
+			const std::string fileDire = "./../Data/0_1_Preset/Other";
 			std::string fileRela = fileDire + "/" + fileName;
 			{
 				// create an empty property tree
@@ -452,9 +452,9 @@ int main()
 			// baseMap.xml
 			{
 				// 設定値保存ファイル名
-				std::string fileName = "baseMap.xml";
+				const std::string fileName = "baseMap.xml";
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				std::string fileDire = "./../Data/0_2_Set/Other";
+				const std::string fileDire = "./../Data/0_2_Set/Other";
 				std::cout << fileName << "を保存中..." << std::endl;
 				// ディレクトリの作成
 				{
@@ -525,9 +525,9 @@ int main()
 			// representativePoints.xml
 			{
 				// 設定値保存ファイル名
-				std::string fileName = "representativePoints.xml";
+				const std::string fileName = "representativePoints.xml";
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				std::string fileDire = "./../Data/0_2_Set/Other";
+				const std::string fileDire = "./../Data/0_2_Set/Other";
 				std::cout << fileName << "を保存中..." << std::endl;
 				// ディレクトリの作成
 				{
@@ -568,7 +568,7 @@ int main()
 			// IsValid/(i+1).xml
 			{
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				std::string fileDire = "./../Data/0_2_Set/Other/IsValid";
+				const std::string fileDire = "./../Data/0_2_Set/Other/IsValid";
 				// ディレクトリの削除 : isValid/
 				{
 					boost::filesystem::path path(fileDire);
@@ -621,13 +621,13 @@ int main()
 			// ディレクトリの削除 : InfoAboutValidCells/
 			{
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
+				const std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
 				boost::filesystem::path path(fileDire);
 				boost::filesystem::remove_all(path);
 			}
 			// ディレクトリの作成 : InfoAboutValidCells/
 			{
-				std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
+				const std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
 				boost::filesystem::path path(fileDire);
 				boost::system::error_code error;
 				const bool result = boost::filesystem::create_directories(path, error);
@@ -717,7 +717,7 @@ int main()
 						// vPairIndexTSTationの保存
 						{
 							// 保存ファイル名
-							std::string fileName = "searchRange.xml";
+							const std::string fileName = "searchRange.xml";
 							// 保存ファイル先のディレクトリのmakefileからの相対位置
 							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi );
 							// 保存path
@@ -917,9 +917,9 @@ int main()
 		// 空のオブジェクト情報の作成・保存
 		{
 			// 保存ファイル名
-			std::string fileName = "emptyObject.xml";
+			const std::string fileName = "emptyObject.xml";
 			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/0_2_Set/Other";
+			const std::string fileDire = "./../Data/0_2_Set/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
@@ -938,9 +938,9 @@ int main()
 		// 1_Cronの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
-			std::string fileName = "InputDataFor1_Cron.xml";
+			const std::string fileName = "InputDataFor1_Cron.xml";
 			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/0_2_Set/Other";
+			const std::string fileDire = "./../Data/0_2_Set/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
@@ -1048,9 +1048,9 @@ int main()
 		// 2_ForEachRequestの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
-			std::string fileName = "InputDataFor2_ForEachRequest.xml";
+			const std::string fileName = "InputDataFor2_ForEachRequest.xml";
 			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			std::string fileDire = "./../Data/0_2_Set/Other";
+			const std::string fileDire = "./../Data/0_2_Set/Other";
 			// 保存path
 			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree

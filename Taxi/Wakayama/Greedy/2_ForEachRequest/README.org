@@ -1,5 +1,5 @@
 * ./../Data/2_ForEachRequestの内部
-** FromViswa
+** FromServer
 手動で作成する．
 
 CommonDataからデータのリンクを張る．
@@ -16,14 +16,14 @@ id_1.xmlと同様
 
 * 実行前にすること
 ** フォルダの作成
-./../Data/1_Cron/FromViswaのフォルダの作成をする．
+./../Data/1_Cron/FromServerのフォルダの作成をする．
 
 ./../Data/1_Cron/Otherのフォルダを作成する．
 
 ** リンクを貼る
 必要な自作関数のリンクを貼る.
 
-./../Data/1_Cron/FromViswaの中に必要なデータのリンクをCommonDataのデータから張る
+./../Data/1_Cron/FromServerの中に必要なデータのリンクをCommonDataのデータから張る
 
 ** makefileへのリンクを貼る
 #+BEGIN_SRC sh

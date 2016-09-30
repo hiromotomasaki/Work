@@ -18,8 +18,8 @@ int myCreateData();
 int myTestFunc()
 {
 	std::cout << "読み込みテスト中..." << "\n";
-	std::string fileName = "base.xml";
-	std::string fileDire = "./../Data/0_1_Preset/Other";
+	const std::string fileName = "base.xml";
+	const std::string fileDire = "./../Data/0_1_Preset/Other";
 	std::string fileRela = fileDire + "/" + fileName;
 	{
 		// create an empty property tree
@@ -181,9 +181,9 @@ int myCreateTestData()
 	// 設定値の保存
 	{
 		// 設定値保存ファイル名
-		std::string fileName = "base.xml";
+		const std::string fileName = "base.xml";
 		// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-		std::string fileDire = "./../Data/0_1_Preset/Other";
+		const std::string fileDire = "./../Data/0_1_Preset/Other";
 		std::cout << fileName << "を保存中..." << std::endl;
 		// ディレクトリの削除
 		{
@@ -457,9 +457,9 @@ int myCreateData()
 	// 設定値の保存
 	{
 		// 設定値保存ファイル名
-		std::string fileName = "base.xml";
+		const std::string fileName = "base.xml";
 		// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-		std::string fileDire = "./../Data/0_1_Preset/Other";
+		const std::string fileDire = "./../Data/0_1_Preset/Other";
 		std::cout << fileName << "を保存中..." << std::endl;
 		// ディレクトリの削除
 		{
