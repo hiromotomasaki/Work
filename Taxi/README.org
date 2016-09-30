@@ -33,3 +33,10 @@ export LD_LIBRARY_PATH=$HOME/local/boost/lib
 詳しくは各ディレクトリにおいてあるREADME.orgを見ること．
 最大3台のサーバーで分割して処理ができる．
 なお，今は複数のCPUに対応した記述はしていない．
+
+
+* ファイル処理
+** 圧縮
+tar zcvf Wakayama.tar.gz Wakayama
+** 展開
+tar xvf Wakayama.tar.gz
