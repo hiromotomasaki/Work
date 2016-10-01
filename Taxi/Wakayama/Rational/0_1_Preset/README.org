@@ -1,0 +1,38 @@
+* ./../Data/0_1_Presetの内部
+** FromServer
+手動で作成する．
+
+特に使わない．
+** Other
+*** base.xml
+設定ファイル．
+
+0_1_Presetの実行ファイルを実行すると，フォルダも含めて作成される(./../Data/0_1_Preset/Other/base.xml).
+
+* 実行前にすること
+** フォルダの作成
+./../Data/0_1_Preset/FromServerのフォルダの作成をする．
+
+** リンクを貼る
+必要な自作関数のリンクを貼る
+** makefileへのリンクを貼る
+#+BEGIN_SRC sh
+[12:39:41]hiro@hiro-VirtualBox:0_1_Preset$ pwd
+/home/hiro/Documents/Work/Taxi/Wakayama/Rational/0_1_Preset
+[12:41:20]hiro@hiro-VirtualBox:0_1_Preset$ ln -s ./makefile_hiromoto makefile
+#+END_SRC
+
+** Source/main.cpp内で
+関数myCreateDataまたは関数myCreateTestDataの内容確認
+
+関数main内部のisTestの値の設定
+
+* 実行手順
+#+BEGIN_SRC sh
+[12:39:41]hiro@hiro-VirtualBox:0_1_Preset$ pwd
+/home/hiro/Documents/Work/Taxi/Wakayama/Rational/0_1_Preset
+[12:41:20]hiro@hiro-VirtualBox:0_1_Preset$ make -j4
+make: 'Bin/main.out' は更新済みです.
+[12:41:25]hiro@hiro-VirtualBox:0_1_Preset$ ./Bin/main.out
+#+END_SRC
+
