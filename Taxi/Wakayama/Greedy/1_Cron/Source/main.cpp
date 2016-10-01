@@ -130,7 +130,7 @@ int main()
 			}
 			{
 				// 領域の確保
-				vValid.reserve(numCell);
+				vValid.resize(numCell);
 				boost::property_tree::ptree::iterator itr_first, itr_last, it;
 				itr_first = pt.get_child( "table.cellIsValid" ).begin();
 				itr_last = pt.get_child( "table.cellIsValid" ).end();
@@ -187,8 +187,8 @@ int main()
 			int N = displayDate.size();
 			// ベクトルの要素の追加
 			{
-				vCTimeStart.reserve(N);
-				vCTimeEnd.reserve(N);
+				vCTimeStart.resize(N);
+				vCTimeEnd.resize(N);
 			}
 			// 値の登録
 			{

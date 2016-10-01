@@ -9,7 +9,7 @@
 using namespace hiro;
 
 // 【この関数の目的】
-// Greedy関係の設定値のxmlファイルを基に1_Cron, 2_ForEachRequestで使用する値を事前に作成する.
+// Rational関係の設定値のxmlファイルを基に1_Cron, 2_ForEachRequestで使用する値を事前に作成する.
 
 // 辞書式ソートができるように構造体を宣言し、ソートの規則をクラスで書く
 struct PairIndexTSTation {
@@ -1063,19 +1063,19 @@ int main()
 				}
 			}
 		}
-		// // demandCircleRangeの確認
-		// {
-		// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
-		// 		int N = demandCircleRange[i].size();
-		// 		if (N >= 2) {
-		// 			std::cout << "[" << i+1 << "] : ";
-		// 			for (int j = 0; j < N; j++) {
-		// 				std::cout << demandCircleRange[i][j] << ", " ;
-		// 			}
-		// 			std::cout << "\n";
-		// 		}
-		// 	}
-		// }
+		// demandCircleRangeの確認
+		{
+			for (int i = 0; i < (int)demandCircleRange.size(); i++) {
+				int N = demandCircleRange[i].size();
+				if (N >= 2) {
+					std::cout << "[" << i+1 << "] : ";
+					for (int j = 0; j < N; j++) {
+						std::cout << demandCircleRange[i][j] << ", " ;
+					}
+					std::cout << "\n";
+				}
+			}
+		}
 		// 1_Cronの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
