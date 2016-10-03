@@ -222,6 +222,37 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	// indexTaxiがサークル上のセルなのか確認して，サークル上であればemptyObject.xmlをコピーして終了
+	{
+		bool check = false;
+		{
+			// 読み込みファイル名
+			std::string fileName = boost::lexical_cast<std::string>( indexTaxi ) + ".xml";
+			// 読み込みファイル先のディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
+			std::string fileRela = fileDire + "/" + fileName;
+			{
+				// create an empty property tree
+				boost::property_tree::ptree pt;
+				// read the xml file
+				boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
+				{
+					check = pt.get<bool>("table.isOnCircle.value");
+				}
+			}
+		}
+		if (!check) {
+			try {
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
+				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
+				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+				return EXIT_SUCCESS;
+			} catch (std::exception& e) {
+				std::cout << "failure!" << "\n";
+				return EXIT_FAILURE;
+			}
+		}
+	}
 	// 位置情報のズレからdirを決定
 	int dir = 1;
 	{
@@ -280,7 +311,7 @@ int main(int argc, char *argv[])
 	{
 		{
 			// 読み込みファイル名
-			const std::string fileName = "indexNotLessThanThreshold.xml";
+			const std::string fileName = "indexNotLessThanThresholdKari.xml";
 			// 読み込みファイル先のディレクトリのmakefileからの相対位置
 			const std::string fileDire = "./../Data/1_Cron/Other";
 			std::string fileRela = fileDire + "/" + fileName;
@@ -318,7 +349,7 @@ int main(int argc, char *argv[])
 		}
 		{
 			// 読み込みファイル名
-			const std::string fileName = "indexUnderThreshold.xml";
+			const std::string fileName = "indexUnderThresholdKari.xml";
 			// 読み込みファイル先のディレクトリのmakefileからの相対位置
 			const std::string fileDire = "./../Data/1_Cron/Other";
 			std::string fileRela = fileDire + "/" + fileName;

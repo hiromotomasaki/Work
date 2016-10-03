@@ -14,13 +14,13 @@ CommonDataからデータのリンクを張る．
 
 以下のファイルが作成される
 *** circleFlag.xml
-サークルが描画されたときに被覆されるセルの判別情報
+サークルが描画されたときに被覆されるセルの判別情報(サークルがひとつもない場合は更新されない)
 *** indexUnderThresholdKari.xml
-需要数がしきい値未満0より大きいindexを有する
+需要数がしきい値未満0より大きいindexを有する(サークルがひとつもない場合はemptyArray.xmlを指す)
 *** indexNotLessThanThresholdKari.xml
-需要数がしきい値以上indexを有する
+需要数がしきい値以上indexを有する(サークルがひとつもない場合はemptyArray.xmlを指す)
 *** circlePoints.xml
-サークルが描画される位置情報
+サークルが描画される位置情報(サークルがひとつもない場合は空のサークル情報がコピーされる)
 
 * 実行前にすること
 ** フォルダの作成

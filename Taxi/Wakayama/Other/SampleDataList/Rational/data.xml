@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<table>
+  <data>
+    <startDate>2016-05-16 11:33:08</startDate>
+    <startPoint>
+      <latitude>34.676638888889</latitude>
+      <longitude>135.50886111111</longitude>
+    </startPoint>
+  </data>
+  <data>
+    <startDate>2016-05-16 11:29:08</startDate>
+    <startPoint>
+      <latitude>34.676648888889</latitude>
+      <longitude>135.50786111111</longitude>
+    </startPoint>
+  </data>
+</table>

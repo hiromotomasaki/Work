@@ -963,6 +963,24 @@ int main()
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
+		// 空のindex配列の情報の作成・保存
+		{
+			// 保存ファイル名
+			const std::string fileName = "emptyIndexArray.xml";
+			// 保存ファイル先のディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/0_2_Set/Other";
+			// 保存path
+			std::string fileRela = fileDire + "/" + fileName;
+			// create an empty property tree
+			boost::property_tree::ptree pt;
+			// create the root element
+			// boost::property_tree::ptree& root = pt.put("table", "");
+			{
+				pt.put("table.index.value", -1);
+			}
+			// output
+			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
+		}
 		// サークル情報の作成
 		// 1列目は-1(invalidのセルもあるため)
 		std::vector<std::vector<int>> demandCircleRange(numCell);
@@ -1063,19 +1081,19 @@ int main()
 				}
 			}
 		}
-		// demandCircleRangeの確認
-		{
-			for (int i = 0; i < (int)demandCircleRange.size(); i++) {
-				int N = demandCircleRange[i].size();
-				if (N >= 2) {
-					std::cout << "[" << i+1 << "] : ";
-					for (int j = 0; j < N; j++) {
-						std::cout << demandCircleRange[i][j] << ", " ;
-					}
-					std::cout << "\n";
-				}
-			}
-		}
+		// // demandCircleRangeの確認
+		// {
+		// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
+		// 		int N = demandCircleRange[i].size();
+		// 		if (N >= 2) {
+		// 			std::cout << "[" << i+1 << ", num = " << N-1 << "] : ";
+		// 			for (int j = 0; j < N; j++) {
+		// 				std::cout << demandCircleRange[i][j] << ", " ;
+		// 			}
+		// 			std::cout << "\n";
+		// 		}
+		// 	}
+		// }
 		// 1_Cronの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
@@ -1100,6 +1118,7 @@ int main()
 				// cellSizeLambda
 				// 
 				// threshold
+				// thresholdKari
 				// 
 				// displayDate
 				// displayTimeFrom
@@ -1152,6 +1171,11 @@ int main()
 				{
 					boost::property_tree::ptree& child = root.add("threshold", "");
 					child.put("value", threshold);
+				}
+				// thresholdKari
+				{
+					boost::property_tree::ptree& child = root.add("thresholdKari", "");
+					child.put("value", thresholdKari);
 				}
 				// displayDate
 				{
@@ -1240,7 +1264,6 @@ int main()
 				// 
 				// maxDistanceFromPreposition
 				//
-				// thresholdKari
 				// ---------------------- //
 				// gCoorNW
 				{
@@ -1284,16 +1307,33 @@ int main()
 					boost::property_tree::ptree& child = root.add("maxDistanceFromPreposition", "");
 					child.put("value", maxDistanceFromPreposition);
 				}
-				// thresholdKari
-				{
-					boost::property_tree::ptree& child = root.add("thresholdKari", "");
-					child.put("value", thresholdKari);
-				}
 			}
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
 	}
+
+	// 追加処理
+	{
+		// ディレクトリの削除
+		{
+			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
+			boost::filesystem::path path(fileDire);
+			boost::filesystem::remove_all(path);
+		}
+		// ディレクトリの作成
+		{
+			const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
+			boost::filesystem::path path(fileDire);
+			boost::system::error_code error;
+			const bool result = boost::filesystem::create_directories(path, error);
+			if (!result || error) {
+				// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
+			}
+		}
+	}
+
     return EXIT_SUCCESS;
 }
 

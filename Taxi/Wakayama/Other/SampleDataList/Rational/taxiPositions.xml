@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<table>
+  <data>
+    <id>1</id>
+    <status>0</status>
+    <position>
+      <latitude>34.22</latitude>
+      <longitude>135.1801</longitude>
+    </position>
+  </data>
+  <data>
+    <id>2</id>
+    <status>0</status>
+    <position>
+      <latitude>34.2232</latitude>
+      <longitude>135.1805</longitude>
+    </position>
+  </data>
+  <data>
+    <id>4</id>
+    <status>1</status>
+    <position>
+      <latitude>34.2232</latitude>
+      <longitude>135.1805</longitude>
+    </position>
+  </data>
+</table>
