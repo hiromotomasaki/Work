@@ -113,8 +113,8 @@ int test_4_GeographicCoordinate(void)
 	return EXIT_SUCCESS;
 }
 
-int test_5_coordinate(void);
-int test_5_coordinate(void)
+int test_5_coordinate_degree(void);
+int test_5_coordinate_degree(void)
 {
 	std::cout << "=========================" << "\n";
 	{
@@ -130,69 +130,312 @@ int test_5_coordinate(void)
 		deg.print();
 		std::cout << "**************" << "\n";
 	}
+	std::cout << "=========================" << "\n";
+	return EXIT_SUCCESS;
+}
+
+int test_6_coordinate_convertGCoorIntoCCoor(void);
+int test_6_coordinate_convertGCoorIntoCCoor(void)
+{
+	std::cout << "=========================" << "\n";
 	{
-		std::cout << "**************" << "\n";
-		GeographicCoordinate gCoor( 36.23, 136.1 );
-		GeographicCoordinate gCoorCri( 36, 136 );
-		CartesianCoordinate cCoor = convertGCoorIntoCCoor( gCoor, gCoorCri );
-		cCoor.print();
-		std::cout << "**************" << "\n";
-	}
-	{
-		// std::cout << "**************" << "\n";
-		// CartesianCoordinate cCoor( 36.23, 136.1 );
-		// GeographicCoordinate gCoorCri( 36, 136 );
-		// GeographicCoordinate gCoor = convertCCoorIntoGCoor( cCoor, gCoorCri );
-		// gCoor.print();
-		// Degree degLat = convertDoubleIntoDegree( gCoor.getPhi() );
-		// Degree degLon = convertDoubleIntoDegree( gCoor.getLambda() );
-		// degLat.print();
-		// degLon.print();
-		// std::cout << "**************" << "\n";
-		std::cout << "**************" << "\n";
-		CartesianCoordinate cCoor( -2134, 6432 );
-		GeographicCoordinate gCoorCri( 36, 136 );
-		GeographicCoordinate gCoor = convertCCoorIntoGCoor( cCoor, gCoorCri );
-		gCoor.print();
-		Degree degLat = convertDoubleIntoDegree( gCoor.getPhi() );
-		Degree degLon = convertDoubleIntoDegree( gCoor.getLambda() );
-		degLat.print();
-		degLon.print();
-		std::cout << "**************" << "\n";
-	}
-	{
-		// std::cout << "**************" << "\n";
-		// GeographicCoordinate gCoorStart( 36, 136 );
-		// GeographicCoordinate gCoorGoal( 36.1, 136 );
-		// TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
-		// tStation.print();
-		// std::cout << "**************" << "\n";
-		std::cout << "**************" << "\n";
-		GeographicCoordinate gCoorStart( 36, 136 );
-		GeographicCoordinate gCoorGoal( 36.123, 135.876 );
-		TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
-		tStation.print();
-		std::cout << "**************" << "\n";
-	}
-	{
-		std::cout << "**************" << "\n";
-		GeographicCoordinate gCoorCri( 36, 136 );
-		CartesianCoordinate cCoorStart( 36.23, 136.1 );
-		CartesianCoordinate cCoorGoal( 100, 1312.1 );
-		TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
-		tStation.print();
+		std::cout << "******* gCoor -> cCoor *******" << "\n";
+		{
+			GeographicCoordinate gCoor( 36, 136 );
+			GeographicCoordinate gCoorCri( 36, 136 );
+			CartesianCoordinate cCoor = convertGCoorIntoCCoor( gCoor, gCoorCri );
+			gCoor.print();
+			gCoorCri.print();
+			cCoor.print();
+		}
+		{
+			GeographicCoordinate gCoor( 36.23, 136.1 );
+			GeographicCoordinate gCoorCri( 36, 136 );
+			CartesianCoordinate cCoor = convertGCoorIntoCCoor( gCoor, gCoorCri );
+			gCoor.print();
+			gCoorCri.print();
+			cCoor.print();
+		}
+		{
+			GeographicCoordinate gCoor( 35.99, 135.67 );
+			GeographicCoordinate gCoorCri( 36, 136 );
+			CartesianCoordinate cCoor = convertGCoorIntoCCoor( gCoor, gCoorCri );
+			gCoor.print();
+			gCoorCri.print();
+			cCoor.print();
+		}
 		std::cout << "**************" << "\n";
 	}
 	std::cout << "=========================" << "\n";
 	return EXIT_SUCCESS;
 }
 
-int main(int argc, char *argv[])
+int test_7_coordinate_convertCCoorIntoGCoor(void);
+int test_7_coordinate_convertCCoorIntoGCoor(void)
 {
-	test_1_Degree();
-	test_2_TotalStation();
-	test_3_CartesianCoordinate();
-	test_4_GeographicCoordinate();
-	test_5_coordinate();
+	std::cout << "=========================" << "\n";
+	{
+		std::cout << "******* cCoor -> gCoor *******" << "\n";
+		{
+			CartesianCoordinate cCoor(0, 0);
+			GeographicCoordinate gCoorCri( 36, 136 );
+			GeographicCoordinate gCoor = convertCCoorIntoGCoor( cCoor, gCoorCri );
+			cCoor.print();
+			gCoorCri.print();
+			gCoor.print();
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getPhi());
+				hoge.print();
+			}
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getLambda());
+				hoge.print();
+			}
+		}
+		{
+			CartesianCoordinate cCoor(100, 100);
+			GeographicCoordinate gCoorCri( 36, 136 );
+			GeographicCoordinate gCoor = convertCCoorIntoGCoor( cCoor, gCoorCri );
+			cCoor.print();
+			gCoorCri.print();
+			gCoor.print();
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getPhi());
+				hoge.print();
+			}
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getLambda());
+				hoge.print();
+			}
+		}
+		{
+			CartesianCoordinate cCoor(100, -100);
+			GeographicCoordinate gCoorCri( 36, 136 );
+			GeographicCoordinate gCoor = convertCCoorIntoGCoor( cCoor, gCoorCri );
+			cCoor.print();
+			gCoorCri.print();
+			gCoor.print();
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getPhi());
+				hoge.print();
+			}
+			{
+				Degree hoge = convertDoubleIntoDegree(gCoor.getLambda());
+				hoge.print();
+			}
+		}
+		std::cout << "**************" << "\n";
+	}
+	std::cout << "=========================" << "\n";
+	return EXIT_SUCCESS;
+}
+
+int test_8_coordinate_calculateTStationFromGCoor(void);
+int test_8_coordinate_calculateTStationFromGCoor(void)
+{
+	std::cout << "=========================" << "\n";
+	{
+		std::cout << "******* (gCoor, gCoor) -> tStation *******" << "\n";
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 36, 136 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 36.1, 136 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 36, 136.1 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 35.9, 136 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 36, 135.9 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		{
+			GeographicCoordinate gCoorStart( 36, 136 );
+			GeographicCoordinate gCoorGoal( 36.12321, 135.9234 );
+			TotalStation tStation = calculateTStationFromGCoor( gCoorStart, gCoorGoal );
+			gCoorStart.print();
+			gCoorGoal.print();
+			tStation.print();
+		}
+		std::cout << "**************" << "\n";
+	}
+	std::cout << "=========================" << "\n";
+	return EXIT_SUCCESS;
+}
+
+int test_9_coordinate_calculateTStationFromCCoor(void);
+int test_9_coordinate_calculateTStationFromCCoor(void)
+{
+	std::cout << "=========================" << "\n";
+	{
+		std::cout << "******* (cCoor, cCoor) -> tStation *******" << "\n";
+		{
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 0, 0 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 10, 0 );
+				CartesianCoordinate cCoorGoal( 10, 0 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 10, 10 );
+				CartesianCoordinate cCoorGoal( 10, 10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 10 );
+				CartesianCoordinate cCoorGoal( 0, 10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 10, 0 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 0, 10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( -10, 0 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 0, -10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 123, 23.2 );
+				CartesianCoordinate cCoorGoal( 1002, 11 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 10, 10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+			{
+				CartesianCoordinate cCoorStart( 0, 0 );
+				CartesianCoordinate cCoorGoal( 10, -10 );
+				GeographicCoordinate gCoorCri(36, 136);
+				TotalStation tStation = calculateTStationFromCCoor( cCoorStart, cCoorGoal, gCoorCri );
+				tStation.print();
+				{
+					Degree hoge = convertDoubleIntoDegree(tStation.getAzimuth());
+					hoge.print();
+				}
+			}
+		}
+		std::cout << "**************" << "\n";
+	}
+	std::cout << "=========================" << "\n";
+	return EXIT_SUCCESS;
+}
+
+
+int main()
+{
+	// test_1_Degree();
+	// test_2_TotalStation();
+	// test_3_CartesianCoordinate();
+	// test_4_GeographicCoordinate();
+	// test_5_coordinate_degree();
+	// test_6_coordinate_convertGCoorIntoCCoor();
+	// test_7_coordinate_convertCCoorIntoGCoor();
+	test_8_coordinate_calculateTStationFromGCoor();
+	// test_9_coordinate_calculateTStationFromCCoor();
     return EXIT_SUCCESS;
 }
