@@ -66,9 +66,17 @@ make runtest -j4
 
 APIとして使う
 
-protoc /home/hiro/local/caffe/src/caffe/proto/caffe.proto --cpp_out=/home/hiro/local/Caffe/include/caffe/proto --proto_path=/home/hiro/local/caffe/src/caffe/proto
+[19:52:27]hiro@hiro-VirtualBox:caffe$ cd include/caffe
+
+[19:54:11]hiro@hiro-VirtualBox:include$ mkdir proto
+
+[20:03:34]hiro@hiro-VirtualBox:caffe$ protoc /home/hiro/local/caffe/src/caffe/proto/caffe.proto --cpp_out=/home/hiro/local/caffe/include/caffe/proto --proto_path=/home/hiro/local/caffe/src/caffe/proto
 
 としてヘッダーの作成が必要
+
+~/.bashrcに以下を記述する．
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/local/caffe/build/lib
 
 
 公式ページ
