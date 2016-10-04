@@ -1,0 +1,14 @@
+# ネットワークの設定ファイル
+net: "net.prototxt"
+# 学習方法
+solver_type: SGD
+# solver_type: RMSProp
+# 学習率（これを隠層の学習率をかけて利用）
+base_lr: 0.01
+# 学習率の方針
+lr_policy: "step"
+gamma: 0.1
+stepsize: 1000
+max_iter: 4000
+momentum: 0.9
+display: 10 
