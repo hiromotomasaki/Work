@@ -29,6 +29,53 @@ boost_1_61_0.tar.bz2をダウンンロード
 export LD_LIBRARY_PATH=$HOME/local/boost/lib
 #+END_SRC
 
+** caffeの導入
+sudo apt install libatlas-base-dev libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libgflags-dev libgoogle-glog-dev liblmdb-dev protobuf-compiler git
+
+cd ~/local
+
+git clone https://github.com/BVLC/caffe.git
+
+取得したバージョン[SHA]の確認
+
+[18:00:18]hiro@hiro-VirtualBox:caffe$ git rev-parse HEAD
+
+a2179bdec004bd1cc2edfc8cf1fbc5b07a117de6
+
+
+過去のバージョンに戻す
+
+git checkout [SHA]
+
+
+
+cp Makefile.config.example Makefile.config
+
+libhdf5-dev関係でエラーが出るので
+
+https://gist.github.com/wangruohui/679b05fcd1466bb0937f
+
+に従ってMakefile.configとMakefileの中身の変更をする。
+
+make -j4
+
+make test -j4
+
+make runtest -j4
+
+
+APIとして使う
+
+protoc /home/hiro/local/caffe/src/caffe/proto/caffe.proto --cpp_out=/home/hiro/local/Caffe/include/caffe/proto --proto_path=/home/hiro/local/caffe/src/caffe/proto
+
+としてヘッダーの作成が必要
+
+
+公式ページ
+http://caffe.berkeleyvision.org/
+
+
+
 * 内容
 詳しくは各ディレクトリにおいてあるREADME.orgを見ること．
 最大3台のサーバーで分割して処理ができる．
