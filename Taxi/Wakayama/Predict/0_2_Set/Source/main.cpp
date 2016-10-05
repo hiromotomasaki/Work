@@ -150,37 +150,16 @@ int main()
 	std::vector<GeographicCoordinate> gCoorRemoveSE;
 	// セルの一辺の長さ[m]
 	double cellSizeMeter;
-	// 表示するピンの日にちに関する抽出条件
-	std::vector<int> displayDate;
 	// 表示するピンの時間幅の始点は現在時刻から何分前なのか
 	int displayTimeFrom;
 	// 表示するピンの時間幅の始点は現在時刻から何分後なのか
 	int displayTimeTo;
-	// セルから描画するオブジェクトの有効範囲の円の半径[m]
-	double searchRange;
-	// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)
-	double searchDegree;
-	// オブジェクト生成の基準となるboxの一辺の長さの最小値
-	double squareLengthMin;
-	// オブジェクト生成の基準となるboxの一辺の長さの最大値
-	double squareLengthMax;
-	// タクシーの進行方向を計算するときに使用する二点間の座標間の距離の最大値．これを越すとオブジェクトは円の中から探索して選ばれる(dir1に相当)．越さなければ進行方向(dir2からdir9)の扇型の中から探索して選ばれる
-	double maxDistanceFromPreposition;
 	// 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．
 	double threshold;
+	// 分配のための設定値(0 < gamma < 1)
+	double gamma;
 	// 離散時間幅
 	double discreteTimeWidth;
-	// あるセルに対する需要数カウントのサークルの半径[m]
-	double demandCountCircleRadius;
-	// あるセルに対する空車数カウントのサークルの半径[m]
-	double vacantCountCircleRadius;
-	// 仮需要のためのしきい値．
-	double thresholdKari;
-	// ----------------------------------------------------- //
-	// ----------------------- その他 ---------------------- //
-	// 設定値の確認表示をするかどうか
-	bool display = true;
-	// bool display = false;
 	// ----------------------------------------------------- //
 
 	// 処理
@@ -254,38 +233,11 @@ int main()
 					cellSizeMeter = pt.get<double>("table.cellSizeMeter.value");
 				}
 				{
-					// 数を調べる
-					int N = 0;
-					{
-						boost::property_tree::ptree::iterator itr_first, itr_last, it;
-						itr_first = pt.get_child( "table.displayDate" ).begin();
-						itr_last = pt.get_child( "table.displayDate" ).end();
-						N = std::distance(itr_first, itr_last);
-					}
-					// 要素の追加
-					displayDate.reserve(N);
-					{
-						boost::property_tree::ptree::iterator itr_first, itr_last, it;
-						itr_first = pt.get_child( "table.displayDate" ).begin();
-						itr_last = pt.get_child( "table.displayDate" ).end();
-						for(it = itr_first; it != itr_last; ++it) {
-							displayDate.push_back(it->second.get<int>("value"));
-						}
-					}
-				}
-				{
 					displayTimeFrom = pt.get<double>("table.displayTimeFrom.value");
 					displayTimeTo = pt.get<double>("table.displayTimeTo.value");
-					searchRange = pt.get<double>("table.searchRange.value");
-					searchDegree = pt.get<double>("table.searchDegree.value");
-					squareLengthMin = pt.get<double>("table.squareLengthMin.value");
-					squareLengthMax = pt.get<double>("table.squareLengthMax.value");
-					maxDistanceFromPreposition = pt.get<double>("table.maxDistanceFromPreposition.value");
 					threshold = pt.get<double>("table.threshold.value");
+					gamma = pt.get<double>("table.gamma.value");
 					discreteTimeWidth = pt.get<double>("table.discreteTimeWidth.value");
-					demandCountCircleRadius = pt.get<double>("table.demandCountCircleRadius.value");
-					vacantCountCircleRadius = pt.get<double>("table.vacantCountCircleRadius.value");
-					thresholdKari = pt.get<double>("table.thresholdKari.value");
 				}
 			}
 		}
@@ -574,15 +526,13 @@ int main()
 					boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 				}
 			}
-			// IsValid/(i+1).xml
+			// indexToTrueIndex.xml
 			{
+				// 設定値保存ファイル名
+				const std::string fileName = "indexToTrueIndex.xml";
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/0_2_Set/Other/IsValid";
-				// ディレクトリの削除 : isValid/
-				{
-					boost::filesystem::path path(fileDire);
-					boost::filesystem::remove_all(path);
-				}
+				const std::string fileDire = "./../Data/0_2_Set/Other";
+				std::cout << fileName << "を保存中..." << std::endl;
 				// ディレクトリの作成
 				{
 					boost::filesystem::path path(fileDire);
@@ -592,10 +542,8 @@ int main()
 						// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
 					}
 				}
-				std::cout << fileDire << "内のファイルを保存中..." << std::endl;
-				// 設定値保存ファイル名
-				for (int i = 0; i < numCell; i++) {
-					std::string fileName = boost::lexical_cast<std::string>( i+1 ) + ".xml";
+				// 保存
+				{
 					// 保存path
 					std::string fileRela = fileDire + "/" + fileName;
 					// create an empty property tree
@@ -606,343 +554,66 @@ int main()
 
 					// add child elements
 					{
-						{
-							boost::property_tree::ptree& child = root.add("isValid", "");
-							child.put("value", vValid[i]);
+						int trueIndex = 1;
+						for (int i = 0; i < numCell; i++) {
+							boost::property_tree::ptree& child = root.add("cell", "");
+							child.put("index", vIndex[i]);
+							if (vValid[i]) {
+								child.put("trueIndex", trueIndex);
+								trueIndex++;
+							}else{
+								child.put("trueIndex", -1);
+							}
 						}
 					}
+
 					// output
 					boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 				}
 			}
-		}
-		// vValidがtrueのセルに対してのみ, 円状の探索範囲や描画するオブジェクト, 扇型の探索範囲を定めて保存
-		// indexTaxiにおける円状の探索範囲の詳細(1_Cron, 2_ForEachRequestでは使わない．ただの保存)
-		// : InfoAboutValidCells/(indexTaxi)/searchRange.xml
-		// indexTaxiから見てindexTarget(!=indexTaxi)を指すときに使用するオブジェクト情報
-		// : InfoAboutValidCells/(indexTaxi)/Object/(indexTarget).xml
-		// indexTaxiから見てindexTarget(==indexTaxi)を指すときに使用するオブジェクト情報．ただし，走行方向はdir(k)
-		// : InfoAboutValidCells/(indexTaxi)/Object/(indexTarget)/dir(k).xml
-		// dir(k)の方向に進んでいるタクシーがindexTaxiにいる場合の探索範囲(dir1は円，dir2からdir9は扇型)
-		// : InfoAboutValidCells/(indexTaxi)/SearchRange/dir(k).xml
-		{
-			std::cout << "InfoAboutValidCells内のファイルを作成していく" << "\n";
-			// ディレクトリの削除 : InfoAboutValidCells/
+			// trueIndexToIndex.xml
 			{
+				// 設定値保存ファイル名
+				const std::string fileName = "trueIndexToIndex.xml";
 				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
-				boost::filesystem::path path(fileDire);
-				boost::filesystem::remove_all(path);
-			}
-			// ディレクトリの作成 : InfoAboutValidCells/
-			{
-				const std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells";
-				boost::filesystem::path path(fileDire);
-				boost::system::error_code error;
-				const bool result = boost::filesystem::create_directories(path, error);
-				if (!result || error) {
-					// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
-				}
-			}
-			std::cout << "vValidがtrueのセルに対してのみ, 円状の探索範囲や描画するオブジェクト, 扇型の探索範囲を定める" << "\n";
-			for (int i = 0; i < numCell; i++) {
-				int indexTaxi = i + 1;
-				// 進行状況の描画
-				if (display) {
-					if (vValid[i]) {
-						std::cout << "[" << indexTaxi << ", " << numCell << "]" << "\n";
-					}else{
-						std::cout << "[" << indexTaxi << ", " << numCell << "]" << " -> Passed" << "\n";
+				const std::string fileDire = "./../Data/0_2_Set/Other";
+				std::cout << fileName << "を保存中..." << std::endl;
+				// ディレクトリの作成
+				{
+					boost::filesystem::path path(fileDire);
+					boost::system::error_code error;
+					const bool result = boost::filesystem::create_directories(path, error);
+					if (!result || error) {
+						// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
 					}
 				}
-				// 有効な各セルでの処理
-				if (vValid[i]) {
-					// InfoAboutValidCells/(indexTaxi)以下の全てのディレクトリの作成
+				// 保存
+				{
+					// 保存path
+					std::string fileRela = fileDire + "/" + fileName;
+					// create an empty property tree
+					boost::property_tree::ptree pt;
+
+					// create the root element
+					boost::property_tree::ptree& root = pt.put("table", "");
+
+					// add child elements
 					{
-						{
-							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi );
-							boost::filesystem::path path(fileDire);
-							boost::system::error_code error;
-							const bool result = boost::filesystem::create_directories(path, error);
-							if (!result || error) {
-								// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
-							}
-						}
-						{
-							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object";
-							boost::filesystem::path path(fileDire);
-							boost::system::error_code error;
-							const bool result = boost::filesystem::create_directories(path, error);
-							if (!result || error) {
-								// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
-							}
-						}
-						{
-							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTaxi );
-							boost::filesystem::path path(fileDire);
-							boost::system::error_code error;
-							const bool result = boost::filesystem::create_directories(path, error);
-							if (!result || error) {
-								// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
-							}
-						}
-						{
-							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/SearchRange";
-							boost::filesystem::path path(fileDire);
-							boost::system::error_code error;
-							const bool result = boost::filesystem::create_directories(path, error);
-							if (!result || error) {
-								// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
+						int trueIndex = 1;
+						for (int i = 0; i < numCell; i++) {
+							if (vValid[i]) {
+								boost::property_tree::ptree& child = root.add("cell", "");
+								child.put("trueIndex", trueIndex);
+								trueIndex++;
+								child.put("index", vIndex[i]);
 							}
 						}
 					}
-					// indexTaxiに対するindexTarget(詳細情報付き)の集合を求めて保存
-					std::vector<PairIndexTSTation> vPairIndexTSTation;
-					{
-						{
-							for (int j = 0; j < numCell; j++) {
-								int indexTarget = j + 1;
-								PairIndexTSTation pairHoge;
-								// indexTaxiからindexTargetへの測地線長と方位角を取得する
-								pairHoge.tStation = calculateTStationFromGCoor( vRepresentativePoint[i], vRepresentativePoint[j] );
-								bool isWithinNeighborhood = (pairHoge.tStation.getLength() <= searchRange);
-								bool isValidCell = vValid[j];
-								bool isValid = isWithinNeighborhood && isValidCell;
-								if (isValid) {
-									// indexTargetを登録
-									pairHoge.index = indexTarget;
-									// 有効セルの情報ベクトルへプッシュ
-									vPairIndexTSTation.push_back(pairHoge);
-								}
-							}
-						}
-						// 第一辞書を測地線長, 第二辞書を方位角, 第三辞書をindexとしてvPairIndexTSTationをソート
-						{
-							std::vector<PairIndexTSTation>::iterator it, itr_first, itr_last;
-							itr_first = vPairIndexTSTation.begin();
-							itr_last = vPairIndexTSTation.end();
-							sort(itr_first, itr_last, MyLessDefinition());
-						}
-						// vPairIndexTSTationの保存
-						{
-							// 保存ファイル名
-							const std::string fileName = "searchRange.xml";
-							// 保存ファイル先のディレクトリのmakefileからの相対位置
-							std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi );
-							// 保存path
-							std::string fileRela = fileDire + "/" + fileName;
-							// create an empty property tree
-							boost::property_tree::ptree pt;
 
-							// create the root element
-							boost::property_tree::ptree& root = pt.put("table", "");
-							// add child elements
-							{
-								int N = vPairIndexTSTation.size();
-								for (int j = 0; j < N; j++) {
-									boost::property_tree::ptree& child = root.add("cell", "");
-									child.put("index", vPairIndexTSTation[j].index);
-									child.put("length", vPairIndexTSTation[j].tStation.getLength());
-									child.put("azimuth", vPairIndexTSTation[j].tStation.getAzimuth());
-								}
-							}
-
-							// output
-							boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-						}
-					}
-					// indexTaxiから見てvPairIndexTSTationの要素を指すときのオブジェクトを求めて保存
-					{
-						int N = vPairIndexTSTation.size();
-						for (int j = 0; j < N; j++) {
-							int indexTarget = vPairIndexTSTation[j].index;
-							bool isSameCell = (indexTaxi == indexTarget);
-							// ------ 必要なもの ------ //
-							// ・indexTargetのセルの代表座標
-							// : gCoorTargetHoge
-							// ・オブジェクト生成の基準となるboxの一辺の長さ[m]
-							// : squareLengthHoge
-							// ・indexTaxiのセルからindexTargetのセルを見た時の方位角[deg]([0, 360))
-							// : deg_10_Hoge
-							// ・計算結果を格納するためにgCoorを２つ
-							// : gCoor_1, gCoor_2
-							// ------------------------ //
-							GeographicCoordinate gCoorTargetHoge = vRepresentativePoint[indexTarget-1];
-							double squareLengthHoge = 0;
-							{
-								double x = vPairIndexTSTation[j].tStation.getLength();
-								double minX = 0;
-								double maxX = searchRange;
-								double yOfMinX = squareLengthMin;
-								double yOfMaxX = squareLengthMax;
-								squareLengthHoge = myHokann(x, minX, maxX, yOfMinX, yOfMaxX);
-							}
-							double deg_10_Hoge = vPairIndexTSTation[j].tStation.getAzimuth();
-							if (isSameCell) {
-								// infoAboutValidCells/(indexTaxi)/object/(indexTarget)/dir(k).xml
-								for (int k = 1; k <= 9; k++) {
-									// k = 1 : 真横
-									// k = 2 : 真横
-									// k = 3 : 下り斜め
-									// k = 4 : 縦
-									// k = 5 : 上り斜め
-									// k = 6 : 真横
-									// k = 7 : 下り斜め
-									// k = 8 : 縦
-									// k = 9 : 上り斜め
-									// (1, 2, 6) -> 真横 -> 0[deg], (3, 7) -> 下り斜め -> 45[deg], (5, 9) -> 上り斜め -> 135[deg], (4, 8) -> 縦 -> 90[deg] と見なせば良い
-									// dir(k)に合わせたdeg_10_Hogeの更新
-									{
-										if (k== 1 || k == 2 || k == 6) {
-											// 真横
-											deg_10_Hoge = 0;
-										}else if (k == 4 || k == 8) {
-											// 縦
-											deg_10_Hoge = 90;
-										}else if (k == 5 || k == 9) {
-											// 上り斜め
-											deg_10_Hoge = 135;
-										}else{
-											// 下り斜め
-											deg_10_Hoge = 45;
-										}
-									}
-									GeographicCoordinate gCoor_1, gCoor_2;
-									myCalculateVertex(gCoor_1, gCoor_2, gCoorTargetHoge, squareLengthHoge, deg_10_Hoge);
-									// 保存
-									{
-										// 保存ファイル名
-										std::string fileName = "dir" + boost::lexical_cast<std::string>( k ) + ".xml";
-										// 保存ファイル先のディレクトリのmakefileからの相対位置
-										std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget );
-										// 保存path
-										std::string fileRela = fileDire + "/" + fileName;
-										// create an empty property tree
-										boost::property_tree::ptree pt;
-										// create the root element
-										// boost::property_tree::ptree& root = pt.put("table", "");
-										{
-											pt.put("table.latitude1", gCoor_1.getPhi());
-											pt.put("table.longitude1", gCoor_1.getLambda());
-											pt.put("table.latitude2", gCoor_2.getPhi());
-											pt.put("table.longitude2", gCoor_2.getLambda());
-										}
-										// output
-										boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-									}
-								}
-							}else{
-								// infoAboutValidCells/(indexTaxi)/object/(indexTarget).xml
-								GeographicCoordinate gCoor_1, gCoor_2;
-								myCalculateVertex(gCoor_1, gCoor_2, gCoorTargetHoge, squareLengthHoge, deg_10_Hoge);
-								// 保存
-								{
-									// 保存ファイル名
-									std::string fileName = boost::lexical_cast<std::string>( indexTarget ) + ".xml";
-									// 保存ファイル先のディレクトリのmakefileからの相対位置
-									std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/";
-									// 保存path
-									std::string fileRela = fileDire + "/" + fileName;
-									// create an empty property tree
-									boost::property_tree::ptree pt;
-									// create the root element
-									// boost::property_tree::ptree& root = pt.put("table", "");
-									{
-										pt.put("table.latitude1", gCoor_1.getPhi());
-										pt.put("table.longitude1", gCoor_1.getLambda());
-										pt.put("table.latitude2", gCoor_2.getPhi());
-										pt.put("table.longitude2", gCoor_2.getLambda());
-									}
-									// output
-									boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-								}
-							}
-						}
-					}
-					// dir(k)の方向に進んでいるタクシーがindexTaxiにいる場合の探索範囲(dir1は円，dir2からdir9は扇型)を求めて保存
-					{
-						double dirTheta[9] = {0, 0, 45, 90, 135, 180, 225, 270, 315};
-						for (int k = 1; k <= 9; k++) {
-							std::vector<PairIndexTSTation> vPairIndexTSTationHoge = vPairIndexTSTation;
-							// vPairIndexTSTationHogeから範囲外の角度を持つ要素を取り除いていく.
-							{
-								if (k != 1) {
-									auto itr = vPairIndexTSTationHoge.begin();
-									while (itr != vPairIndexTSTationHoge.end()) {
-										bool isWithinValidDegree = false;
-										{
-											// indexTaxiのセルからitrが指すindexTargetのセルを見た時の方位角[deg]([0, 360))
-											double theta_Hoge = itr -> tStation.getAzimuth();
-											// 進行方向の方位角
-											double thetaCri_Hoge = dirTheta[k-1];
-											// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)．しかし，dir1もあるので中心角度は360度までにしても大丈夫にする
-											double Theta_Hoge = searchDegree;
-											int indexTarget = itr -> index;
-											bool condition = (indexTaxi == indexTarget);
-											if (condition) {
-												isWithinValidDegree = true;
-											}else{
-												isWithinValidDegree = myCheckDegreeRange(theta_Hoge, thetaCri_Hoge, Theta_Hoge);
-											}
-										}
-										if(!isWithinValidDegree) {
-											itr = vPairIndexTSTationHoge.erase(itr);
-										}else{
-											itr++;
-										}
-									}
-								}
-							}
-							// indexTargetから見たdir(k)の方向に対する探索範囲がvPairIndexTSTationHogeに決定したので保存する
-							{
-								// 保存ファイル名
-								std::string fileName = "dir" + boost::lexical_cast<std::string>( k ) + ".xml";
-								// 保存ファイル先のディレクトリのmakefileからの相対位置
-								std::string fileDire = "./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/SearchRange";
-								// 保存path
-								std::string fileRela = fileDire + "/" + fileName;
-								// create an empty property tree
-								boost::property_tree::ptree pt;
-
-								// create the root element
-								boost::property_tree::ptree& root = pt.put("table", "");
-								// add child elements
-								{
-									int N = vPairIndexTSTationHoge.size();
-									for (int j = 0; j < N; j++) {
-										boost::property_tree::ptree& child = root.add("cell", "");
-										child.put("index", vPairIndexTSTationHoge[j].index);
-									}
-								}
-
-								// output
-								boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-							}
-						}
-					}
+					// output
+					boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 				}
 			}
-		}
-		// 空のオブジェクト情報の作成・保存
-		{
-			// 保存ファイル名
-			const std::string fileName = "emptyObject.xml";
-			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/0_2_Set/Other";
-			// 保存path
-			std::string fileRela = fileDire + "/" + fileName;
-			// create an empty property tree
-			boost::property_tree::ptree pt;
-			// create the root element
-			// boost::property_tree::ptree& root = pt.put("table", "");
-			{
-				pt.put("table.latitude1", -1);
-				pt.put("table.longitude1", -1);
-				pt.put("table.latitude2", -1);
-				pt.put("table.longitude2", -1);
-			}
-			// output
-			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
 		// 空のサークル情報の作成・保存
 		{
@@ -963,10 +634,10 @@ int main()
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
-		// 空のindex配列の情報の作成・保存
+		// 0_3_Learnの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
-			const std::string fileName = "emptyIndexArray.xml";
+			const std::string fileName = "InputDataFor0_3_Learn.xml";
 			// 保存ファイル先のディレクトリのmakefileからの相対位置
 			const std::string fileDire = "./../Data/0_2_Set/Other";
 			// 保存path
@@ -974,126 +645,82 @@ int main()
 			// create an empty property tree
 			boost::property_tree::ptree pt;
 			// create the root element
-			// boost::property_tree::ptree& root = pt.put("table", "");
+			boost::property_tree::ptree& root = pt.put("table", "");
+			// add child elements
 			{
-				pt.put("table.index.value", -1);
+				// ----- 加えるもの ----- //
+				// gCoorNW
+				// gCoorSE
+				// numCell
+				// numValidCell
+				// numRow
+				// numCol
+				// cellSizePhi
+				// cellSizeLambda
+				//
+				// indexToTrueIndex
+				//
+				// ---------------------- //
+				// gCoorNW
+				{
+					boost::property_tree::ptree& child = root.add("gCoorNW", "");
+					child.put("phi", gCoorNW.getPhi());
+					child.put("lambda", gCoorNW.getLambda());
+				}
+				// gCoorSE
+				{
+					boost::property_tree::ptree& child = root.add("gCoorSE", "");
+					child.put("phi", gCoorSE.getPhi());
+					child.put("lambda", gCoorSE.getLambda());
+				}
+				// numCell
+				{
+					boost::property_tree::ptree& child = root.add("numCell", "");
+					child.put("value", numCell);
+				}
+				// numValidCell
+				{
+					boost::property_tree::ptree& child = root.add("numValidCell", "");
+					child.put("value", numValidCell);
+				}
+				// numRow
+				{
+					boost::property_tree::ptree& child = root.add("numRow", "");
+					child.put("value", numRow);
+				}
+				// numCol
+				{
+					boost::property_tree::ptree& child = root.add("numCol", "");
+					child.put("value", numCol);
+				}
+				// cellSizePhi
+				{
+					boost::property_tree::ptree& child = root.add("cellSizePhi", "");
+					child.put("value", cellSizePhi);
+				}
+				// cellSizeLambda
+				{
+					boost::property_tree::ptree& child = root.add("cellSizeLambda", "");
+					child.put("value", cellSizeLambda);
+				}
+				// indexToTrueIndex
+				{
+					boost::property_tree::ptree& child = root.add("indexToTrueIndex", "");
+					int trueIndex = 1;
+					for (int i = 0; i < numCell; i++) {
+						boost::property_tree::ptree& cchild = child.add("cell", "");
+						if (vValid[i]) {
+							cchild.put("value", trueIndex);
+							trueIndex++;
+						}else{
+							cchild.put("value", -1);
+						}
+					}
+				}
 			}
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
-		// サークル情報の作成
-		// 1列目は-1(invalidのセルもあるため)
-		std::vector<std::vector<int>> demandCircleRange(numCell);
-		{
-			for (int i = 0; i < numCell; i++) {
-				// int indexTaxi = i + 1;
-				// 有効な各セルでの処理
-				if (vValid[i]) {
-					// indexTaxiに対するindexTarget(詳細情報付き)の集合を求めて保存
-					std::vector<PairIndexTSTation> vPairIndexTSTation;
-					{
-						{
-							for (int j = 0; j < numCell; j++) {
-								int indexTarget = j + 1;
-								PairIndexTSTation pairHoge;
-								// indexTaxiからindexTargetへの測地線長と方位角を取得する
-								pairHoge.tStation = calculateTStationFromGCoor( vRepresentativePoint[i], vRepresentativePoint[j] );
-								bool isWithinNeighborhood = (pairHoge.tStation.getLength() <= demandCountCircleRadius);
-								bool isValidCell = vValid[j];
-								bool isValid = isWithinNeighborhood && isValidCell;
-								if (isValid) {
-									// indexTargetを登録
-									pairHoge.index = indexTarget;
-									// 有効セルの情報ベクトルへプッシュ
-									vPairIndexTSTation.push_back(pairHoge);
-								}
-							}
-						}
-						// 第一辞書を測地線長, 第二辞書を方位角, 第三辞書をindexとしてvPairIndexTSTationをソート
-						{
-							std::vector<PairIndexTSTation>::iterator it, itr_first, itr_last;
-							itr_first = vPairIndexTSTation.begin();
-							itr_last = vPairIndexTSTation.end();
-							sort(itr_first, itr_last, MyLessDefinition());
-						}
-					}
-					// demandCircleRange[i]への登録
-					{
-						int N = vPairIndexTSTation.size();
-						demandCircleRange[i].resize(1+N);
-						demandCircleRange[i][0] = -1;
-						for (int j = 1; j <= N; j++) {
-							demandCircleRange[i][j] = vPairIndexTSTation[j-1].index;
-						}
-					}
-				}else{
-					demandCircleRange[i].resize(1);
-					demandCircleRange[i][0] = -1;
-				}
-			}
-		}
-		std::vector<std::vector<int>> vacantCircleRange(numCell);
-		{
-			for (int i = 0; i < numCell; i++) {
-				// int indexTaxi = i + 1;
-				// 有効な各セルでの処理
-				if (vValid[i]) {
-					// indexTaxiに対するindexTarget(詳細情報付き)の集合を求めて保存
-					std::vector<PairIndexTSTation> vPairIndexTSTation;
-					{
-						{
-							for (int j = 0; j < numCell; j++) {
-								int indexTarget = j + 1;
-								PairIndexTSTation pairHoge;
-								// indexTaxiからindexTargetへの測地線長と方位角を取得する
-								pairHoge.tStation = calculateTStationFromGCoor( vRepresentativePoint[i], vRepresentativePoint[j] );
-								bool isWithinNeighborhood = (pairHoge.tStation.getLength() <= vacantCountCircleRadius);
-								bool isValidCell = vValid[j];
-								bool isValid = isWithinNeighborhood && isValidCell;
-								if (isValid) {
-									// indexTargetを登録
-									pairHoge.index = indexTarget;
-									// 有効セルの情報ベクトルへプッシュ
-									vPairIndexTSTation.push_back(pairHoge);
-								}
-							}
-						}
-						// 第一辞書を測地線長, 第二辞書を方位角, 第三辞書をindexとしてvPairIndexTSTationをソート
-						{
-							std::vector<PairIndexTSTation>::iterator it, itr_first, itr_last;
-							itr_first = vPairIndexTSTation.begin();
-							itr_last = vPairIndexTSTation.end();
-							sort(itr_first, itr_last, MyLessDefinition());
-						}
-					}
-					// vacantCircleRange[i]への登録
-					{
-						int N = vPairIndexTSTation.size();
-						vacantCircleRange[i].resize(1+N);
-						vacantCircleRange[i][0] = -1;
-						for (int j = 1; j <= N; j++) {
-							vacantCircleRange[i][j] = vPairIndexTSTation[j-1].index;
-						}
-					}
-				}else{
-					vacantCircleRange[i].resize(1);
-					vacantCircleRange[i][0] = -1;
-				}
-			}
-		}
-		// // demandCircleRangeの確認
-		// {
-		// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
-		// 		int N = demandCircleRange[i].size();
-		// 		if (N >= 2) {
-		// 			std::cout << "[" << i+1 << ", num = " << N-1 << "] : ";
-		// 			for (int j = 0; j < N; j++) {
-		// 				std::cout << demandCircleRange[i][j] << ", " ;
-		// 			}
-		// 			std::cout << "\n";
-		// 		}
-		// 	}
-		// }
 		// 1_Cronの初期取り込みデータの作成・保存
 		{
 			// 保存ファイル名
@@ -1112,23 +739,19 @@ int main()
 				// gCoorNW
 				// gCoorSE
 				// numCell
+				// numValidCell
 				// numRow
 				// numCol
 				// cellSizePhi
 				// cellSizeLambda
-				// 
-				// threshold
-				// thresholdKari
-				// 
-				// displayDate
+				//
+				// trueIndexToIndex
+				//
 				// displayTimeFrom
 				// displayTimeTo
+				// threshold
+				// gamma
 				// discreteTimeWidth
-				// 
-				// vValid
-				//
-				// demandCircleRange
-				// vacantCircleRange
 				// ---------------------- //
 				// gCoorNW
 				{
@@ -1146,6 +769,11 @@ int main()
 				{
 					boost::property_tree::ptree& child = root.add("numCell", "");
 					child.put("value", numCell);
+				}
+				// numValidCell
+				{
+					boost::property_tree::ptree& child = root.add("numValidCell", "");
+					child.put("value", numValidCell);
 				}
 				// numRow
 				{
@@ -1167,26 +795,20 @@ int main()
 					boost::property_tree::ptree& child = root.add("cellSizeLambda", "");
 					child.put("value", cellSizeLambda);
 				}
-				// threshold
+				// trueIndexToIndex
 				{
-					boost::property_tree::ptree& child = root.add("threshold", "");
-					child.put("value", threshold);
-				}
-				// thresholdKari
-				{
-					boost::property_tree::ptree& child = root.add("thresholdKari", "");
-					child.put("value", thresholdKari);
-				}
-				// displayDate
-				{
-					boost::property_tree::ptree& child = root.add("displayDate", "");
-					int N = displayDate.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& cchild = child.add("date", "");
-						cchild.put("value", displayDate[i]);
+					boost::property_tree::ptree& child = root.add("trueIndexToIndex", "");
+					int trueIndex = 1;
+					for (int i = 0; i < numCell; i++) {
+						if (vValid[i]) {
+							boost::property_tree::ptree& cchild = child.add("cell", "");
+							cchild.put("trueIndex", trueIndex);
+							trueIndex++;
+							cchild.put("index", vIndex[i]);
+						}
 					}
 				}
-                // displayTimeFrom
+				// displayTimeFrom
 				{
 					boost::property_tree::ptree& child = root.add("displayTimeFrom", "");
 					child.put("value", displayTimeFrom);
@@ -1196,141 +818,24 @@ int main()
 					boost::property_tree::ptree& child = root.add("displayTimeTo", "");
 					child.put("value", displayTimeTo);
 				}
+				// threshold
+				{
+					boost::property_tree::ptree& child = root.add("threshold", "");
+					child.put("value", threshold);
+				}
+				// gamma
+				{
+					boost::property_tree::ptree& child = root.add("gamma", "");
+					child.put("value", gamma);
+				}
 				// discreteTimeWidth
 				{
 					boost::property_tree::ptree& child = root.add("discreteTimeWidth", "");
 					child.put("value", discreteTimeWidth);
 				}
-				// vValid
-				{
-					boost::property_tree::ptree& child = root.add("cellIsValid", "");
-					for (int i = 0; i < numCell; i++) {
-						boost::property_tree::ptree& cchild = child.add("cell", "");
-						cchild.put("value", vValid[i]);
-					}
-				}
-				// demandCircleRange
-				{
-					boost::property_tree::ptree& child = root.add("demandCircleRange", "");
-					int N = demandCircleRange.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& cchild = child.add("cell", "");
-						int M = demandCircleRange[i].size();
-						for (int j = 0; j < M; j++) {
-							boost::property_tree::ptree& ccchild = cchild.add("index", "");
-							ccchild.put("value", demandCircleRange[i][j]);
-						}
-					}
-				}
-				// vacantCircleRange
-				{
-					boost::property_tree::ptree& child = root.add("vacantCircleRange", "");
-					int N = vacantCircleRange.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& cchild = child.add("cell", "");
-						int M = vacantCircleRange[i].size();
-						for (int j = 0; j < M; j++) {
-							boost::property_tree::ptree& ccchild = cchild.add("index", "");
-							ccchild.put("value", vacantCircleRange[i][j]);
-						}
-					}
-				}
 			}
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-		}
-		// 2_ForEachRequestの初期取り込みデータの作成・保存
-		{
-			// 保存ファイル名
-			const std::string fileName = "InputDataFor2_ForEachRequest.xml";
-			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/0_2_Set/Other";
-			// 保存path
-			std::string fileRela = fileDire + "/" + fileName;
-			// create an empty property tree
-			boost::property_tree::ptree pt;
-			// create the root element
-			boost::property_tree::ptree& root = pt.put("table", "");
-			// add child elements
-			{
-				// ----- 加えるもの ----- //
-				// gCoorNW
-				// gCoorSE
-				// numCell
-				// numRow
-				// numCol
-				// cellSizePhi
-				// cellSizeLambda
-				// 
-				// maxDistanceFromPreposition
-				//
-				// ---------------------- //
-				// gCoorNW
-				{
-					boost::property_tree::ptree& child = root.add("gCoorNW", "");
-					child.put("phi", gCoorNW.getPhi());
-					child.put("lambda", gCoorNW.getLambda());
-				}
-				// gCoorSE
-				{
-					boost::property_tree::ptree& child = root.add("gCoorSE", "");
-					child.put("phi", gCoorSE.getPhi());
-					child.put("lambda", gCoorSE.getLambda());
-				}
-				// numCell
-				{
-					boost::property_tree::ptree& child = root.add("numCell", "");
-					child.put("value", numCell);
-				}
-				// numRow
-				{
-					boost::property_tree::ptree& child = root.add("numRow", "");
-					child.put("value", numRow);
-				}
-				// numCol
-				{
-					boost::property_tree::ptree& child = root.add("numCol", "");
-					child.put("value", numCol);
-				}
-				// cellSizePhi
-				{
-					boost::property_tree::ptree& child = root.add("cellSizePhi", "");
-					child.put("value", cellSizePhi);
-				}
-				// cellSizeLambda
-				{
-					boost::property_tree::ptree& child = root.add("cellSizeLambda", "");
-					child.put("value", cellSizeLambda);
-				}
-				// maxDistanceFromPreposition
-				{
-					boost::property_tree::ptree& child = root.add("maxDistanceFromPreposition", "");
-					child.put("value", maxDistanceFromPreposition);
-				}
-			}
-			// output
-			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-		}
-	}
-
-	// 追加処理
-	{
-		// ディレクトリの削除
-		{
-			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
-			boost::filesystem::path path(fileDire);
-			boost::filesystem::remove_all(path);
-		}
-		// ディレクトリの作成
-		{
-			const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
-			boost::filesystem::path path(fileDire);
-			boost::system::error_code error;
-			const bool result = boost::filesystem::create_directories(path, error);
-			if (!result || error) {
-				// std::cout << "ディレクトリの作成に失敗したか、すでにあります。" << std::endl;
-			}
 		}
 	}
 

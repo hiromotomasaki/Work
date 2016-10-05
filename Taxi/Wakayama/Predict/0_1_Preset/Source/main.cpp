@@ -9,65 +9,11 @@
 using namespace hiro;
 
 // 【この関数の目的】
-// Rational関係の設定値のxmlファイルを作成する．
+// Predict関係の設定値のxmlファイルを作成する．
 
-// サークルの重なりの解決方法
-// まず，threshold以上の需要数を持つ全サークルの中心セル番号を取得
-// 大きい順に並べる
-// 上から順番に描画を決定
-// サークルに被覆されるセル(フラグ1)とその周りのもし描画するとサークルが重なる位置となるセル(フラグ2)にフラグを立てる(つまり，サークルが書かれたセルからサークルの直径分の半径の円の領域にフラグが立つ)
-// 描画を決定するときにそのフラグのチェックを行い，立っていれば描画はしないことにする．
-// 描画されるサークルの各需要数からある大きさのサークル内にある空車の数を引き，それをそのセルの仮需要数とする．
 
-// 保存するのは(描画するサークルの位置情報)と(そのサークルのindexと仮需要数のペアとフラグ1情報)
-// 前者は1_Cronの結果として描画に使用され，後者は2_ForEachRequestでオブジェクト生成に使用される．(** に続く)
-
-// **
-// もし，indexTaxiがフラグ1の場所である場合
-// : 空のオブジェクト情報を返す．
-// そうでない場合
-// : まず探索範囲内で仮需要数がしきい値以上ある最も近いサークルの中心セルをindexTargetとしてオブジェクト情報を返す．
-// : もしなければ，仮需要数がしきい値未満，0より大きい最も近いサークルの中心セルをindexTargetとしてオブジェクト情報を返す．
-// : それでもなければ，空のオブジェクト情報を返す．
-
-int myTestFunc();
 int myCreateTestData();
 int myCreateData();
-
-int myTestFunc()
-{
-	std::cout << "読み込みテスト中..." << "\n";
-	const std::string fileName = "base.xml";
-	const std::string fileDire = "./../Data/0_1_Preset/Other";
-	std::string fileRela = fileDire + "/" + fileName;
-	{
-		// create an empty property tree
-		boost::property_tree::ptree pt;
-		// read the xml file
-		boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
-		// ループなし
-		{
-			GeographicCoordinate gCoorNW;
-			gCoorNW.setPhi( pt.get<double>( "table.gCoorNW.phi" ) );
-			gCoorNW.setLambda( pt.get<double>( "table.gCoorNW.lambda" ) );
-			gCoorNW.print();
-		}
-		// ループあり
-		{
-			boost::property_tree::ptree::iterator itr_first, itr_last, it;
-			itr_first = pt.get_child( "table.gCoorRemove" ).begin();
-			itr_last = pt.get_child( "table.gCoorRemove" ).end();
-			int N = std::distance(itr_first, itr_last);
-			std::cout << "要素数 ： " << N << "\n";
-			for(it = itr_first; it != itr_last; ++it) {
-				std::cout << "[" << std::distance(itr_first, it) << "]" << "\n";
-				std::cout << it->second.get<double>("phiNW") << "\n";
-			}
-		}
-	}
-	std::cout << fileName << "の読込終了" << std::endl;
-    return EXIT_SUCCESS;
-}
 
 int myCreateTestData()
 {
@@ -96,47 +42,20 @@ int myCreateTestData()
 	gCoorRemoveSE.push_back( GeographicCoordinate( 34.174944, 135.221072 ) );
 	// セルの一辺の長さ[m]
 	double cellSizeMeter = 200;
-	// 表示するピンの日にちに関する抽出条件
-	std::vector<int> displayDate;
-	displayDate.push_back( 7*4 );
-	displayDate.push_back( 7*5 );
-	displayDate.push_back( 7*6 );
-	displayDate.push_back( 7*7 );
-	displayDate.push_back( 7*8 );
-	displayDate.push_back( 7*9 );
-	displayDate.push_back( 7*10 );
-	displayDate.push_back( 7*11 );
-	// 表示するピンの時間幅の始点は現在時刻から何分前なのか
+	// 表示されるピンの時間幅の始点は現在時刻から何分前なのか
 	int displayTimeFrom = -2;
-	// 表示するピンの時間幅の始点は現在時刻から何分後なのか
+	// 表示されるピンの時間幅の終点は現在時刻から何分後なのか
 	int displayTimeTo = 4;
-	// セルから描画するオブジェクトの有効範囲の円の半径[m]
-	double searchRange = 3000;
-	// double searchRange = 1000;	// test
-	// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)
-	double searchDegree = 180;
-	// オブジェクト生成の基準となるboxの一辺の長さの最小値
-	double squareLengthMin = 200;
-	// オブジェクト生成の基準となるboxの一辺の長さの最大値
-	double squareLengthMax = 1000;
-	// タクシーの進行方向を計算するときに使用する二点間の座標間の距離の最大値．これを越すとオブジェクトは円の中から探索して選ばれる(dir1に相当)．越さなければ進行方向(dir2からdir9)の扇型の中から探索して選ばれる
-	double maxDistanceFromPreposition = 3000;
 	// 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．
 	double threshold = 2;
+	// 分配のための設定値(0 < gamma < 1)
+	double gamma = 0.2;
 	// 離散時間幅
 	int discreteTimeWidth = 2;
-	// あるセルに対する需要数カウントのサークルの半径[m]
-	double demandCountCircleRadius = 500;
-	// あるセルに対する空車数カウントのサークルの半径[m]
-	double vacantCountCircleRadius = 1000;
-	// 仮需要のためのしきい値．
-	double thresholdKari = 1;
 	// ------------------------------------------- //
 	// ------------------ その他 ----------------- //
 	// 設定値の確認表示をするかどうか
 	bool display = true;
-	// 保存ファイルの一部読み込みをしてチェックするか
-	bool check = true;
 	// ------------------------------------------- //
 
 	// 表示
@@ -171,41 +90,16 @@ int myCreateTestData()
 		}
 		std::cout << "--------- セルの一辺の長さ[m] ---------" << "\n";
 		std::cout << cellSizeMeter << "\n";
-		std::cout << "--------- 表示するピンは何日前のものか ---------" << "\n";
-		{
-			int N = displayDate.size();
-			for (int i = 0; i < N; i++) {
-				std::cout << displayDate[i];
-				if (i != N-1) {
-					std::cout << ", ";
-				}
-			}
-			std::cout << "\n";
-		}
 		std::cout << "---------  表示するピンの時間幅の始点は現在時刻から何分前なのか ---------" << "\n";
 		std::cout << displayTimeFrom << "\n";
 		std::cout << "---------  表示するピンの時間幅の始点は現在時刻から何分後なのか ---------" << "\n";
 		std::cout << displayTimeTo << "\n";
-		std::cout << "--------- セルから描画するオブジェクトの有効範囲の円の半径[m]  ---------" << "\n";
-		std::cout << searchRange << "\n";
-		std::cout << "--------- タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)  ---------" << "\n";
-		std::cout << searchDegree << "\n";
-		std::cout << "--------- オブジェクトの底辺の長さの最小値  ---------" << "\n";
-		std::cout << squareLengthMin << "\n";
-		std::cout << "--------- オブジェクトの底辺の長さの最大値  ---------" << "\n";
-		std::cout << squareLengthMax << "\n";
-		std::cout << "--------- タクシーの進行方向を計算するときに使用する二点間の座標間の距離の最大値．これを越すとオブジェクトは円の中から探索して選ばれる(dir1に相当)．越さなければ進行方向(dir2からdir9)の扇型の中から探索して選ばれる  ---------" << "\n";
-		std::cout << maxDistanceFromPreposition << "\n";
 		std::cout << "--------- 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．  ---------" << "\n";
 		std::cout << threshold << "\n";
-		std::cout << "--------- 離散時間幅．  ---------" << "\n";
+		std::cout << "--------- 分配のための設定値(0 < gamma < 1)  ---------" << "\n";
+		std::cout << gamma << "\n";
+		std::cout << "--------- 離散時間幅  ---------" << "\n";
 		std::cout << discreteTimeWidth << "\n";
-		std::cout << "--------- あるセルに対する需要数カウントのサークルの半径[m]  ---------" << "\n";
-		std::cout << demandCountCircleRadius << "\n";
-		std::cout << "--------- あるセルに対する空車数カウントのサークルの半径[m]  ---------" << "\n";
-		std::cout << vacantCountCircleRadius << "\n";
-		std::cout << "--------- 仮需要のためのしきい値  ---------" << "\n";
-		std::cout << thresholdKari << "\n";
 		std::cout << "==================================" << "\n";
 	}
 
@@ -279,14 +173,6 @@ int myCreateTestData()
 					child.put("value", cellSizeMeter);
 				}
 				{
-					boost::property_tree::ptree& child = root.add("displayDate", "");
-					int N = displayDate.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& cchild = child.add("date", "");
-						cchild.put("value", displayDate[i]);
-					}
-				}
-				{
 					boost::property_tree::ptree& child = root.add("displayTimeFrom", "");
 					child.put("value", displayTimeFrom);
 				}
@@ -295,44 +181,16 @@ int myCreateTestData()
 					child.put("value", displayTimeTo);
 				}
 				{
-					boost::property_tree::ptree& child = root.add("searchRange", "");
-					child.put("value", searchRange);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("searchDegree", "");
-					child.put("value", searchDegree);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("squareLengthMin", "");
-					child.put("value", squareLengthMin);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("squareLengthMax", "");
-					child.put("value", squareLengthMax);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("maxDistanceFromPreposition", "");
-					child.put("value", maxDistanceFromPreposition);
-				}
-				{
 					boost::property_tree::ptree& child = root.add("threshold", "");
 					child.put("value", threshold);
 				}
 				{
+					boost::property_tree::ptree& child = root.add("gamma", "");
+					child.put("value", gamma);
+				}
+				{
 					boost::property_tree::ptree& child = root.add("discreteTimeWidth", "");
 					child.put("value", discreteTimeWidth);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("demandCountCircleRadius", "");
-					child.put("value", demandCountCircleRadius);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("vacantCountCircleRadius", "");
-					child.put("value", vacantCountCircleRadius);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("thresholdKari", "");
-					child.put("value", thresholdKari);
 				}
 			}
 
@@ -341,11 +199,6 @@ int myCreateTestData()
 			}
 		}
 
-	// テスト
-	if (check) {
-		myTestFunc();
-	}
-
     return EXIT_SUCCESS;
 }
 
@@ -353,9 +206,9 @@ int myCreateData()
 {
 	// ------------- ユーザー入力値  ------------- //
 	// 営業領域の外枠の最北西
-	GeographicCoordinate gCoorNW( 34.296332, 135.061091 );
+	GeographicCoordinate gCoorNW( 34.275080, 135.138074 );
 	// 営業領域の外枠の最南東
-	GeographicCoordinate gCoorSE( 34.143423, 135.339895 );
+	GeographicCoordinate gCoorSE( 34.178566, 135.242616 );
 	// 追加する営業領域の最北西
 	std::vector<GeographicCoordinate> gCoorAddNW;
 	gCoorAddNW.push_back( GeographicCoordinate( 34.284311, 135.183871 ) );
@@ -396,47 +249,20 @@ int myCreateData()
 	gCoorRemoveSE.push_back( GeographicCoordinate( 34.143055, 135.169831 ) );
 	// セルの一辺の長さ[m]
 	double cellSizeMeter = 200;
-	// 表示するピンの日にちに関する抽出条件
-	std::vector<int> displayDate;
-	displayDate.push_back( 7*4 );
-	displayDate.push_back( 7*5 );
-	displayDate.push_back( 7*6 );
-	displayDate.push_back( 7*7 );
-	displayDate.push_back( 7*8 );
-	displayDate.push_back( 7*9 );
-	displayDate.push_back( 7*10 );
-	displayDate.push_back( 7*11 );
-	// 表示するピンの時間幅の始点は現在時刻から何分前なのか
+	// 表示されるピンの時間幅の始点は現在時刻から何分前なのか
 	int displayTimeFrom = -2;
-	// 表示するピンの時間幅の始点は現在時刻から何分後なのか
+	// 表示されるピンの時間幅の終点は現在時刻から何分後なのか
 	int displayTimeTo = 4;
-	// セルから描画するオブジェクトの有効範囲の円の半径[m]
-	double searchRange = 3000;
-	// double searchRange = 1000;	// test
-	// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)
-	double searchDegree = 180;
-	// オブジェクト生成の基準となるboxの一辺の長さの最小値
-	double squareLengthMin = 200;
-	// オブジェクト生成の基準となるboxの一辺の長さの最大値
-	double squareLengthMax = 1000;
-	// タクシーの進行方向を計算するときに使用する二点間の座標間の距離の最大値．これを越すとオブジェクトは円の中から探索して選ばれる(dir1に相当)．越さなければ進行方向(dir2からdir9)の扇型の中から探索して選ばれる
-	double maxDistanceFromPreposition = 3000;
 	// 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．
 	double threshold = 2;
+	// 分配のための設定値(0 < gamma < 1)
+	double gamma = 0.2;
 	// 離散時間幅
 	int discreteTimeWidth = 2;
-	// あるセルに対する需要数カウントのサークルの半径[m]
-	double demandCountCircleRadius = 500;
-	// あるセルに対する空車数カウントのサークルの半径[m]
-	double vacantCountCircleRadius = 1000;
-	// 仮需要のためのしきい値．
-	double thresholdKari = 1;
 	// ------------------------------------------- //
 	// ------------------ その他 ----------------- //
 	// 設定値の確認表示をするかどうか
 	bool display = true;
-	// 保存ファイルの一部読み込みをしてチェックするか
-	bool check = true;
 	// ------------------------------------------- //
 
 	// 表示
@@ -471,41 +297,16 @@ int myCreateData()
 		}
 		std::cout << "--------- セルの一辺の長さ[m] ---------" << "\n";
 		std::cout << cellSizeMeter << "\n";
-		std::cout << "--------- 表示するピンは何日前のものか ---------" << "\n";
-		{
-			int N = displayDate.size();
-			for (int i = 0; i < N; i++) {
-				std::cout << displayDate[i];
-				if (i != N-1) {
-					std::cout << ", ";
-				}
-			}
-			std::cout << "\n";
-		}
 		std::cout << "---------  表示するピンの時間幅の始点は現在時刻から何分前なのか ---------" << "\n";
 		std::cout << displayTimeFrom << "\n";
 		std::cout << "---------  表示するピンの時間幅の始点は現在時刻から何分後なのか ---------" << "\n";
 		std::cout << displayTimeTo << "\n";
-		std::cout << "--------- セルから描画するオブジェクトの有効範囲の円の半径[m]  ---------" << "\n";
-		std::cout << searchRange << "\n";
-		std::cout << "--------- タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)  ---------" << "\n";
-		std::cout << searchDegree << "\n";
-		std::cout << "--------- オブジェクトの底辺の長さの最小値  ---------" << "\n";
-		std::cout << squareLengthMin << "\n";
-		std::cout << "--------- オブジェクトの底辺の長さの最大値  ---------" << "\n";
-		std::cout << squareLengthMax << "\n";
-		std::cout << "--------- タクシーの進行方向を計算するときに使用する二点間の座標間の距離の最大値．これを越すとオブジェクトは円の中から探索して選ばれる(dir1に相当)．越さなければ進行方向(dir2からdir9)の扇型の中から探索して選ばれる  ---------" << "\n";
-		std::cout << maxDistanceFromPreposition << "\n";
 		std::cout << "--------- 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．  ---------" << "\n";
 		std::cout << threshold << "\n";
-		std::cout << "--------- 離散時間幅．  ---------" << "\n";
+		std::cout << "--------- 分配のための設定値(0 < gamma < 1)  ---------" << "\n";
+		std::cout << gamma << "\n";
+		std::cout << "--------- 離散時間幅  ---------" << "\n";
 		std::cout << discreteTimeWidth << "\n";
-		std::cout << "--------- あるセルに対する需要数カウントのサークルの半径[m]  ---------" << "\n";
-		std::cout << demandCountCircleRadius << "\n";
-		std::cout << "--------- あるセルに対する空車数カウントのサークルの半径[m]  ---------" << "\n";
-		std::cout << vacantCountCircleRadius << "\n";
-		std::cout << "--------- 仮需要のためのしきい値  ---------" << "\n";
-		std::cout << thresholdKari << "\n";
 		std::cout << "==================================" << "\n";
 	}
 
@@ -579,14 +380,6 @@ int myCreateData()
 					child.put("value", cellSizeMeter);
 				}
 				{
-					boost::property_tree::ptree& child = root.add("displayDate", "");
-					int N = displayDate.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& cchild = child.add("date", "");
-						cchild.put("value", displayDate[i]);
-					}
-				}
-				{
 					boost::property_tree::ptree& child = root.add("displayTimeFrom", "");
 					child.put("value", displayTimeFrom);
 				}
@@ -595,44 +388,16 @@ int myCreateData()
 					child.put("value", displayTimeTo);
 				}
 				{
-					boost::property_tree::ptree& child = root.add("searchRange", "");
-					child.put("value", searchRange);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("searchDegree", "");
-					child.put("value", searchDegree);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("squareLengthMin", "");
-					child.put("value", squareLengthMin);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("squareLengthMax", "");
-					child.put("value", squareLengthMax);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("maxDistanceFromPreposition", "");
-					child.put("value", maxDistanceFromPreposition);
-				}
-				{
 					boost::property_tree::ptree& child = root.add("threshold", "");
 					child.put("value", threshold);
 				}
 				{
+					boost::property_tree::ptree& child = root.add("gamma", "");
+					child.put("value", gamma);
+				}
+				{
 					boost::property_tree::ptree& child = root.add("discreteTimeWidth", "");
 					child.put("value", discreteTimeWidth);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("demandCountCircleRadius", "");
-					child.put("value", demandCountCircleRadius);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("vacantCountCircleRadius", "");
-					child.put("value", vacantCountCircleRadius);
-				}
-				{
-					boost::property_tree::ptree& child = root.add("thresholdKari", "");
-					child.put("value", thresholdKari);
 				}
 			}
 
@@ -640,11 +405,6 @@ int myCreateData()
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 			}
 		}
-
-	// テスト
-	if (check) {
-		myTestFunc();
-	}
 
     return EXIT_SUCCESS;
 }

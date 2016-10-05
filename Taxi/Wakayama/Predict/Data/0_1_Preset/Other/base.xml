@@ -45,66 +45,19 @@
   <cellSizeMeter>
     <value>200</value>
   </cellSizeMeter>
-  <displayDate>
-    <date>
-      <value>28</value>
-    </date>
-    <date>
-      <value>35</value>
-    </date>
-    <date>
-      <value>42</value>
-    </date>
-    <date>
-      <value>49</value>
-    </date>
-    <date>
-      <value>56</value>
-    </date>
-    <date>
-      <value>63</value>
-    </date>
-    <date>
-      <value>70</value>
-    </date>
-    <date>
-      <value>77</value>
-    </date>
-  </displayDate>
   <displayTimeFrom>
     <value>-2</value>
   </displayTimeFrom>
   <displayTimeTo>
     <value>4</value>
   </displayTimeTo>
-  <searchRange>
-    <value>3000</value>
-  </searchRange>
-  <searchDegree>
-    <value>180</value>
-  </searchDegree>
-  <squareLengthMin>
-    <value>200</value>
-  </squareLengthMin>
-  <squareLengthMax>
-    <value>1000</value>
-  </squareLengthMax>
-  <maxDistanceFromPreposition>
-    <value>3000</value>
-  </maxDistanceFromPreposition>
   <threshold>
     <value>2</value>
   </threshold>
+  <gamma>
+    <value>0.20000000000000001</value>
+  </gamma>
   <discreteTimeWidth>
     <value>2</value>
   </discreteTimeWidth>
-  <demandCountCircleRadius>
-    <value>500</value>
-  </demandCountCircleRadius>
-  <vacantCountCircleRadius>
-    <value>1000</value>
-  </vacantCountCircleRadius>
-  <thresholdKari>
-    <value>1</value>
-  </thresholdKari>
 </table>

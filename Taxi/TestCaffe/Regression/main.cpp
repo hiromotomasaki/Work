@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     caffe::Net<double> net_test("net.prototxt", caffe::TEST);
     net_test.CopyTrainedLayersFrom("_iter_4000.caffemodel");
     
-    
+
 
   }
 
