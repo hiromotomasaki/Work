@@ -1,0 +1,148 @@
+# train_test.prototxto
+# ネットワーク構成と学習データセット
+
+# ネットワークはblobとlayerからなる
+# layer -> blob -> layer -> ・・・ -> blob -> layer の順で最初と最後はlayerである。
+# layer : 畳み込みやプーリング、内積などの操作単位
+# blob : 実データを格納するデータ構造
+#
+# layersの中に前後のblobを記述していくという仕様
+# 例)
+# layer_1 -> blob_1 -> layer_2
+# layer_1の中に
+# top: "blob_1"
+# layer_2の中に
+# bottom: "blob_1"
+#
+# name : layerの名前
+# type : この層がどういう操作を行うか指定
+# bottom : 下の何と言う名前のblobからデータがくるかを指定
+# top : 上の何と言う名前のblobにデータを送るかを指定
+#
+# 主なlayerのタイプ
+# Data                  学習及び評価データセット
+# Convolution           畳み込み層
+# Pooling               プーリング層
+# InnerProduct          全結合層
+# Dropout               学習時にドロップアウトの処理を行う
+# LRN                   Local Response Normalizationに基づく正規化処理
+# SoftmaxWithLoss       ユークリッド距離による誤差計算
+# HingeLoss             ヒンジ損失計算
+# ReLU                  Rectified linear unitによる活性化関数
+# Sigmoid               シグモイド関数による活性化関数
+# TanH                  tanh関数による活性化関数
+# Softmax               ソフトマックスによる出力
+# Argmax                最大となるクラス出力
+# Accuracy              識別精度を求める
+
+#####################################################
+name: "TRAIN"
+layer {
+      name: "input"
+      type: "MemoryData"
+      top: "input"
+      top: "dummyLabell1"
+      memory_data_param {
+                        batch_size: 100 # 一回のプロセスで入れる訓練データの数
+                        channels: 1450 # color channelの数のこと。ここをn,height, widthを1にすればn次元のベクトルデータが扱える。
+                        height: 1
+                        width: 1
+      }
+}
+
+layer {
+      name: "target"
+      type: "MemoryData"
+      top: "target"
+      top: "dummyLadell2"
+      memory_data_param {
+                        batch_size: 100 # 一回のプロセスで入れる訓練データの数
+                        channels: 1957 # color channelの数のこと。ここをn,height, widthを1にすればn次元のベクトルデータが扱える。
+                        height: 1
+                        width: 1
+                        }
+}
+layer {
+      name: "ip1"
+      type: "InnerProduct"
+      top: "ip1"
+      bottom: "input"
+      # 重さの初期値の学習係数の倍率
+      param {
+            lr_mult: 1
+      }
+      # バイアスの初期値の学習係数の倍率
+      param {
+            lr_mult: 2
+      }
+      inner_product_param {
+                          num_output: 200
+                          # 重さの初期値の決め方
+                          weight_filler {
+                                        type: "xavier"
+                                        }
+                          # バイアスの初期値の決め方
+                          bias_filler {
+                                      type: "constant"
+                                      value: 0
+                                      }
+                          }
+}
+layer {
+      name: "relu1"
+      type: "ReLU"
+      bottom: "ip1"
+      top: "ip1"
+}
+layer {
+      name: "ip2"
+      type: "InnerProduct"
+      top: "ip2"
+      bottom: "ip1"
+      # 重さの初期値の学習係数の倍率
+      param {
+            lr_mult: 1
+      }
+      # バイアスの初期値の学習係数の倍率
+      param {
+            lr_mult: 2
+      }
+      inner_product_param {
+                          num_output: 1957
+                          # 重さの初期値の決め方
+                          weight_filler {
+                                        type: "xavier"
+                                        }
+                          # バイアスの初期値の決め方
+                          bias_filler {
+                                      type: "constant"
+                                      value: 0
+                                      }
+                          }
+}
+layer {
+      name: "relu2"
+      type: "ReLU"
+      bottom: "ip2"
+      top: "ip2"
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "ip2"
+  bottom: "target"
+  top: "loss"
+  include{
+  phase: TEST
+  }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "ip2"
+  bottom: "target"
+  top: "loss"
+  include{
+  phase: TRAIN
+  }
+}

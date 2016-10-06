@@ -52,9 +52,9 @@ COMPILER := g++
 # BIN_DIRに作成される実行ファイル(main.out, outはなくても構わない)
 PROGRAM := main.out
 # コンパイル時に環境変数に登録されていないディレクトリにあるヘッダーのディレクトリを書く
-INCLUDE_PATH := -I ./Include -I ~/local/boost/include
+INCLUDE_PATH := -I ./Include -I ~/local/boost/include -I /home/hiro/local/caffe/include
 # コンパイル時のその他のオプション
-COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self -Wpointer-arith
+COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self -Wpointer-arith -DCPU_ONLY
 # ******************************* 説明 ****************************** #
 # -MMD : システムヘッダディレクトリ以外のヘッダーを調べコンパイルし*.dに依存関係を保存する
 # -MP : 依存するヘッダファイルを偽のターゲットとして追加する。
@@ -72,10 +72,10 @@ COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self
 # 1.静的(libfoo.so), 2.動的(libfoo.a)の順でLIBRARY_PATHからサーチされる
 # 動的リンクは実行ファイルを実行するときに, 静的リンクはリンクを貼るときにリンクされる.
 # 前者のほうがファイルサイズが少なくて済む
-LIBRARY_PATH := -L ~/local/boost/lib
+LIBRARY_PATH := -L ~/local/boost/lib -L ~/local/caffe/build/lib
 # リンク時に使用するライブラリを書く.
 # このライブラリは環境変数またはLIBRARY_PATHから見えるところにある.
-LIBRARY := -lboost_system -lboost_filesystem -lboost_date_time
+LIBRARY := -lboost_system -lboost_filesystem -lboost_date_time -lcaffe -lglog
 # --------------------------------------------------------------------- #
 
 # ======================================================================= #

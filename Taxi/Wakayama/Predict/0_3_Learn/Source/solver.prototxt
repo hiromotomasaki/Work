@@ -1,0 +1,39 @@
+# 学習パラメータのファイル
+# solver.prototxt
+
+# ネットワークの設定ファイル
+net: "Source/train_test.prototxt"
+
+# 学習方法
+solver_type: SGD
+
+# 学習率（これを各層の学習率にかけて利用）
+base_lr: 0.01
+
+# 学習率の方針
+# drop the learning rate in step sizes indicated by the gamma parameter.
+lr_policy: "step"
+gamma: 0.1
+
+# This parameter indicates how often (at some iteration count) that we should move onto the next "step" of training. This value is a positive integer.
+stepsize: 2000
+
+# This parameter indicates when the network should stop training. The value is an integer indicate which iteration should be the last.
+# ミニバッチ数が64でデータ数が50000の場合、batch数は50000/64=781となる。つまり、重みの更新は781回行われる。max_iterを10000に設定すると、10000/781=12回学習を繰り返すことになる。重みの更新は781*12=9372回となる。
+# データ数(a)をミニバッチ数(b)の整数倍にすること、max_iter(c)をa/bの整数倍にすることが必要である。
+max_iter: 50000
+
+# This parameter indicates how much of the previous weight will be retained in the new calculation. This value is a real fraction.
+momentum: 0.9
+
+display: 5000
+
+# This parameter indicates how often caffe should output a model and solverstate. This value is a positive integer.
+snapshot: 10000
+
+# 保存ファイルのprefix名
+snapshot_prefix: "./../Data/0_3_Learn/Other/Neural"
+
+# This parameter indicates which mode will be used in solving the network.
+solver_mode: CPU
+

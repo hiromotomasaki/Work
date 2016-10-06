@@ -1,52 +1,50 @@
-* ./../Data/1_Cronの内部
+* ./../Data/0_3_Learnの内部
 ** FromServer
 手動で作成する．
 
 CommonDataからデータのリンクを張る．
-*** currentTime.xml
-現在時刻のデータ
-*** data.xml
+*** fullData.xml
 ピンのデータ
-*** taxiPositions.xml
-全タクシーの位置と状態のデータ
 ** Other
 手動で作成する．
 
-以下のファイルが作成される
-*** circleFlag.xml
-サークルが描画されたときに被覆されるセルの判別情報(サークルがひとつもない場合は更新されない)
-*** indexUnderThresholdKari.xml
-需要数がしきい値未満0より大きいindexを有する(サークルがひとつもない場合はemptyArray.xmlを指す)
-*** indexNotLessThanThresholdKari.xml
-需要数がしきい値以上indexを有する(サークルがひとつもない場合はemptyArray.xmlを指す)
-*** circlePoints.xml
-サークルが描画される位置情報(サークルがひとつもない場合は空のサークル情報がコピーされる)
-
 * 実行前にすること
-** フォルダの作成
-./../Data/1_Cron/FromServerのフォルダの作成をする．
+** train_test.prototxt内の変更
+input layerの
 
-./../Data/1_Cron/Otherのフォルダを作成する．
+channels = 1450
+
+target layerの
+
+channels = 1957 (= 有効セル数 + 1)
+
+relu1 layerの
+
+inner_product_paramのnum_output = 1957 (= 有効セル数 + 1)
+** フォルダの作成
+./../Data/0_3_Learn/FromServerのフォルダの作成をする．
+
+./../Data/0_3_Learn/Otherのフォルダを作成する．
 
 ** リンクを貼る
 必要な自作関数のリンクを貼る.
 
-./../Data/1_Cron/FromServerの中に必要なデータのリンクをCommonDataのデータから張る
+./../Data/0_3_Learn/FromServerの中に必要なデータのリンクをCommonDataのデータから張る
 
 ** makefileへのリンクを貼る
 #+BEGIN_SRC sh
-[12:39:41]hiro@hiro-VirtualBox:1_Cron$ pwd
-/home/hiro/Documents/Work/Taxi/Wakayama/Rational/1_Cron
-[12:41:20]hiro@hiro-VirtualBox:1_Cron$ ln -s ./makefile_hiromoto makefile
+[12:39:41]hiro@hiro-VirtualBox:0_3_Learn$ pwd
+/home/hiro/Documents/Work/Taxi/Wakayama/Predict/0_3_Learn
+[12:41:20]hiro@hiro-VirtualBox:0_3_Learn$ ln -s ./makefile_hiromoto makefile
 #+END_SRC
 
 
 * 実行手順
 #+BEGIN_SRC sh
-[12:39:41]hiro@hiro-VirtualBox:1_Cron$ pwd
-/home/hiro/Documents/Work/Taxi/Wakayama/Rational/1_Cron
-[12:41:20]hiro@hiro-VirtualBox:1_Cron$ make -j4
+[12:39:41]hiro@hiro-VirtualBox:0_3_Learn$ pwd
+/home/hiro/Documents/Work/Taxi/Wakayama/Predict/0_3_Learn
+[12:41:20]hiro@hiro-VirtualBox:0_3_Learn$ make -j4
 make: 'Bin/main.out' は更新済みです.
-[12:41:25]hiro@hiro-VirtualBox:1_Cron$ ./Bin/main.out
+[12:41:25]hiro@hiro-VirtualBox:0_3_Learn$ ./Bin/main.out
 #+END_SRC
 

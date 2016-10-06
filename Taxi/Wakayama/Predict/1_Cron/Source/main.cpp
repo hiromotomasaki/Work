@@ -6,39 +6,49 @@
  */
 #include "main.hpp"
 
+#define MAX_TEMP_MAX 40
+#define MAX_TEMP_MIN 0
+#define MIN_TEMP_MAX 35
+#define MIN_TEMP_MIN -5
+
 using namespace hiro;
 
 // 【この関数の目的】
-// Cronごとにある抽出条件にしたがって得られたData.xmlから，有効な各セルに対してサークル内の需要数を求める．有効なセルの中で，しきい値以上の需要数を持つセルの代表点を間引いて保存する．描画を行うサークルの需要数から対応するサークルの空車数を引いた仮需要数を計算する．仮しきい値以上の仮需要数を持つセルのindex番号を取得，1以上仮しきい値未満の仮需要数を持つセルのindex番号を取得，保存する．
+// CronごとにNeuralネットワークで需要を予測し，需要が集中しているセルの位置情報を返す．
 
-// 以下のファイルが作成される
-// *** circleFlag.xml
-// サークルが描画されたときに被覆されるセルの判別情報
-// *** indexUnderThresholdKari.xml
-// 需要数がしきい値未満0より大きいindexを有する
-// *** indexNotLessThanThresholdKari.xml
-// 需要数がしきい値以上indexを有する
-// *** circlePoints.xml
-// サークルが描画される位置情報
-
-struct PairIndexDemand {
-    int index;
-    int demand;
-};
-class MyNotLessDefinition {
-public:
-    bool operator()(const PairIndexDemand& a, const PairIndexDemand& b)
-    {
-		if( a.demand == b.demand ) {
-			return a.index < b.index;
-		}
-		return a.demand > b.demand;
-    }
+// 構造体の宣言
+struct DataFactor{
+	boost::posix_time::ptime pTimeRound;
+	int step;
+	int day_5_10_20_lastDay;
+	int holiday;
+	int month12to2;
+	int month3to5;
+	int month6to8;
+	int month9to11;
+	double maxTemp;
+	double minTemp;
+	double dayW;
+	double nightW;
 };
 
 
 // 時間を丸める関数
 boost::posix_time::ptime roundPTime(const boost::posix_time::ptime &pTime, const int delta);
+bool IsLeapYear(int year);
+int GetLastDay(int year, int month);
+int getStep(const boost::posix_time::ptime &pTime, const int delta);
+int evaluateDay_5_10_20_lastDay(const boost::posix_time::ptime &pTime, const int delta);
+int evaluateMonth12to2(const boost::posix_time::ptime &pTime, const int delta);
+int evaluateMonth3to5(const boost::posix_time::ptime &pTime, const int delta);
+int evaluateMonth6to8(const boost::posix_time::ptime &pTime, const int delta);
+int evaluateMonth9to11(const boost::posix_time::ptime &pTime, const int delta);
+int Holiday(const time_t t);
+int Syunbun(int yy);
+int Syubun(int yy);
+time_t my_to_time_t(boost::posix_time::ptime t);
+int evaluateHoliday(const boost::posix_time::ptime &pTime, const int delta);
+
 boost::posix_time::ptime roundPTime(const boost::posix_time::ptime &pTime, const int delta) {
 	boost::posix_time::ptime ret(boost::gregorian::date(pTime.date().year(),pTime.date().month().as_number(),pTime.date().day()), boost::posix_time::time_duration(pTime.time_of_day().hours(),0,0));
 	// f(秒) = 60(秒/分)*x(分)+y(秒)
@@ -68,8 +78,350 @@ boost::posix_time::ptime roundPTime(const boost::posix_time::ptime &pTime, const
 	return ret;
 }
 
+bool IsLeapYear(int year)
+{
+    if (((year % 4 == 0) && (year % 100 != 0)) || year % 400 == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+int GetLastDay(int year, int month)
+{
+    bool leap;
+    int lmdays[] = {31,29,31,30,31,30,31,31,30,31,30,31};
+    int mdays[]  = {31,28,31,30,31,30,31,31,30,31,30,31};
+
+    leap = IsLeapYear(year);
+    // leap year
+    if (leap == true) {
+        return lmdays[month - 1];
+		// no_leap year
+    } else {
+        return mdays[month - 1];
+    }
+}
+int getStep(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int hours = pTimeHoge.time_of_day().hours();
+	int minutes = pTimeHoge.time_of_day().minutes();
+	int sumMinutes = 60 * hours + minutes;
+	ret = sumMinutes / delta + 1;
+	return ret;
+}
+int evaluateDay_5_10_20_lastDay(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int days = pTimeHoge.date().day();
+	if( days == 5 || days == 10 || days == 20 ) {
+		ret = 1;
+	}else{
+		int years = pTimeHoge.date().year();
+		int months = pTimeHoge.date().month().as_number();
+		bool isMonthEnd = ( days == GetLastDay( years, months) );
+		if( isMonthEnd == true ) {
+			ret = 1;
+		}
+	}
+	return ret;
+}
+int evaluateMonth12to2(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int months = pTimeHoge.date().month();
+	if (months == 12 || months == 1 || months == 2) {
+		ret = 1;
+	}
+	return ret;
+}
+int evaluateMonth3to5(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int months = pTimeHoge.date().month();
+	if (months == 3 || months == 4 || months == 5) {
+		ret = 1;
+	}
+	return ret;
+}
+int evaluateMonth6to8(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int months = pTimeHoge.date().month();
+	if (months == 6 || months == 7 || months == 8) {
+		ret = 1;
+	}
+	return ret;
+}
+int evaluateMonth9to11(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	int months = pTimeHoge.date().month();
+	if (months == 9 || months == 10 || months == 11) {
+		ret = 1;
+	}
+	return ret;
+}
+int Holiday(const time_t t)
+{
+	int yy;
+	int mm;
+	int dd;
+	int ww;
+	int r;
+	struct tm *Hizuke;
+	const time_t SYUKUJITSU=-676976400; /*1948年7月20日*/
+	const time_t FURIKAE=103388400; /*1973年04月12日*/
+	Hizuke=localtime(&t);
+	yy=Hizuke->tm_year+1900;
+	mm=Hizuke->tm_mon+1;
+	dd=Hizuke->tm_mday;
+	ww=Hizuke->tm_wday;
+
+	r=0;
+	if (ww==6){
+		r=1;
+	} else if (ww==0){
+		r=2;
+	}
+
+	if (t<SYUKUJITSU){
+		return r;
+	}
+
+	switch (mm) {
+	case 1:
+		if (dd==1){
+			r=5; /*元日*/
+		} else {
+			if (yy>=2000){
+				if (((int)((dd-1)/7)==1)&&(ww==1)){
+					r=5; /*成人の日*/
+				}
+			} else {
+				if (dd==15){
+					r=5; /*成人の日*/
+				}
+			}
+		}
+		break;
+	case 2:
+		if (dd==11){
+			if (yy>=1967){
+				r=5; /*建国記念の日*/
+			}
+		} else if ((yy==1989)&&(dd==24)){
+			r=5; /*昭和天皇の大喪の礼*/
+		}
+		break;
+	case 3:
+		if (dd==Syunbun(yy)){
+			r=5; /*春分の日*/
+		}
+		break;
+	case 4:
+		if (dd==29){
+			if (yy>=2007){
+				r=5; /*昭和の日*/
+			} else if (yy>=1989){
+				r=5; /*みどりの日*/
+			} else {
+				r=5; /*天皇誕生日*/
+			}
+		} else if ((yy==1959)&&(dd==10)){
+			r=5; /*皇太子明仁親王の結婚の儀*/
+		}
+		break;
+	case 5:
+		if (dd==3){
+			r=5; /*憲法記念日*/
+		} else if (dd==4){
+			if (yy>=2007) {
+				r=5; /*みどりの日*/
+			} else if (yy>=1986) {
+				/* 5/4が日曜日は『只の日曜』､月曜日は『憲法記念日の振替休日』(～2006年)*/
+				if (ww>1) {
+					r=3; /*国民の休日*/
+				}
+			}
+		} else if (dd==5) {
+			r=5; /*こどもの日*/
+		} else if (dd==6) {
+			/* [5/3,5/4が日曜]ケースのみ、ここで判定 */
+			if ((yy>=2007)&&((ww==2)||(ww==3))){
+				r=4; /*振替休日*/
+			}
+		}
+		break;
+	case 6:
+		if ((yy==1993)&&(dd==9)){
+			r=5; /*皇太子徳仁親王の結婚の儀*/
+		}
+		break;
+	case 7:
+		if (yy>=2003){
+			if (((int)((dd-1)/7)==2)&&(ww==1)){
+				r=5; /*海の日*/
+			}
+		} else if (yy>=1996){
+			if (dd==20) {
+				r=5; /*海の日*/
+			}
+		}
+		break;
+	case 8:
+		if (dd==11){
+			if (yy>=2016){
+				r=5; /*山の日*/
+			}
+		}
+		break;
+	case 9:
+		if (dd==Syubun(yy)){
+			r=5; /*秋分の日*/
+		} else {
+			if (yy>=2003) {
+				if (((int)((dd-1)/7)==2)&&(ww==1)){
+					r=5; /*敬老の日*/
+				} else if (ww==2){
+					if (dd==Syubun(yy)-1){
+						r=3; /*国民の休日*/
+					}
+				}
+			} else if (yy>=1966){
+				if (dd==15) {
+					r=5; /*敬老の日*/
+				}
+			}
+		}
+		break;
+	case 10:
+		if (yy>=2000){
+			if (((int)((dd-1)/7)==1)&&(ww==1)){
+				r=5; /*体育の日*/
+			}
+		} else if (yy>=1966){
+			if (dd==10){
+				r=5; /*体育の日*/
+			}
+		}
+		break;
+	case 11:
+		if (dd==3){
+			r=5; /*文化の日*/
+		} else if (dd==23) {
+			r=5; /*勤労感謝の日*/
+		} else if ((yy==1990)&&(dd==12)){
+			r=5; /*即位礼正殿の儀*/
+		}
+		break;
+	case 12:
+		if (dd==23){
+			if (yy>=1989){
+				r=5; /*天皇誕生日*/
+			}
+		}
+	}
+
+	if ((r<=3)&&(ww==1)){
+		/*月曜以外は振替休日判定不要
+		  5/6(火,水)の判定は上記ステップで処理済
+		  5/6(月)はここで判定する  */
+		if (t>=FURIKAE) {
+			if (Holiday(t-86400)==5){    /* 再帰呼出 */
+				r=4;
+			}
+		}
+	}
+	return r;
+}
+
+/*  春分/秋分日の略算式は
+    『海上保安庁水路部 暦計算研究会編 新こよみ便利帳』
+	で紹介されている式です。 */
+
+/*春分の日を返す関数*/
+int Syunbun(int yy)
+{
+	int dd;
+	if (yy<=1947){
+		dd=99;
+	} else if (yy<=1979){
+		dd=(int)(20.8357+(0.242194*(yy-1980))-(int)((yy-1983)/4));
+	} else if (yy<=2099){
+		dd=(int)(20.8431+(0.242194*(yy-1980))-(int)((yy-1980)/4));
+	} else if (yy<=2150){
+		dd=(int)(21.851+(0.242194*(yy-1980))-(int)((yy-1980)/4));
+	} else {
+		dd=99;
+	}
+	return dd;
+}
+
+/*秋分の日を返す関数*/
+int Syubun(int yy)
+{
+	int dd;
+	if (yy<=1947){
+		dd=99;
+	} else if (yy<=1979){
+		dd=(int)(23.2588+(0.242194*(yy-1980))-(int)((yy-1983)/4));
+	} else if (yy<=2099){
+		dd=(int)(23.2488+(0.242194*(yy-1980))-(int)((yy-1980)/4));
+	} else if (yy<=2150){
+		dd=(int)(24.2488+(0.242194*(yy-1980))-(int)((yy-1980)/4));
+	} else {
+		dd=99;
+	}
+	return dd;
+}
+
+time_t my_to_time_t(boost::posix_time::ptime t)
+{
+    using namespace boost::posix_time;
+    ptime epoch(boost::gregorian::date(1970,1,1));
+    time_duration::sec_type x = (t - epoch).total_seconds();
+
+    // ... check overflow here ...
+
+    return time_t(x);
+}
+
+int evaluateHoliday(const boost::posix_time::ptime &pTime, const int delta)
+{
+	boost::posix_time::ptime pTimeHoge = roundPTime(pTime, delta);
+	int ret = 0;
+	{
+		int dayOfWeek = pTimeHoge.date().day_of_week().as_number(); // Sunday == 0, Monday == 1, Saturday == 6
+		if( dayOfWeek == 0 || dayOfWeek == 6 ) {
+			ret = 1;
+		}else {
+			// 祝日かどうかの確認
+			bool isHoliday = false;
+			if( 5 == Holiday( my_to_time_t( pTimeHoge ) ) ) {
+				isHoliday = true;
+			}
+			if( isHoliday == true ) {
+				ret = 1;
+			}
+		}
+	}
+	return ret;
+}
+
 int main()
 {
+
+	bool displayDataFactor = true;
+	bool displayDemand = true;
+	bool simpleVersion = true;	// falseにするとgammaやthresholdをうまく調整しないとサークルは出てこない．
+	bool displayTrueIndex = true;
 	// ------------- 取得するもの  ------------- //
 	// 営業領域の外枠の最北西
 	GeographicCoordinate gCoorNW;
@@ -77,6 +429,8 @@ int main()
 	GeographicCoordinate gCoorSE;
 	// 営業領域の外枠内にあるセル数
 	int numCell;
+	// 営業領域の外枠内にある有効セル数
+	int numValidCell;
 	// 営業領域の外枠の行数
 	int numRow;
 	// 営業領域の外枠の列数
@@ -86,25 +440,19 @@ int main()
 	// セルの東西の経度差
 	double cellSizeLambda;
 
-    // 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．
-	double threshold;
-	// サークルの仮需要のしきい値
-	double thresholdKari;
+	// 有効なセルのtrueIndexをIndexに変換するとどうなるか
+	std::vector<int> trueIndexToIndex;
 
-    // 表示するピンの日にちに関する抽出条件
-	std::vector<int> displayDate;
 	// 表示するピンの時間幅の始点は現在時刻から何分前なのか
 	int displayTimeFrom;
 	// 表示するピンの時間幅の始点は現在時刻から何分後なのか
 	int displayTimeTo;
+	// しきい値
+	double threshold;
+	// 配分の設定値
+	double gamma;
 	// 離散時間幅
 	int discreteTimeWidth;
-	// セルが有効かどうか
-	std::vector<bool> vValid;
-	// 需要数をカウントするサークル情報
-	std::vector<std::vector<int>> demandCircleRange;
-	// 空車数をカウントするサークル情報（需要数をカウントするサークルの2倍の直径）
-	std::vector<std::vector<int>> vacantCircleRange;
 	// ----------------------------------------------------- //
 
 	// Data/0_2_Set/InputDataFor1_Cron.xmlから読み込む
@@ -129,32 +477,13 @@ int main()
 			}
 			{
 				numCell = pt.get<int>("table.numCell.value");
+				numValidCell = pt.get<int>("table.numValidCell.value");
 				numRow = pt.get<int>("table.numRow.value");
 				numCol = pt.get<int>("table.numCol.value");
 				cellSizePhi = pt.get<double>("table.cellSizePhi.value");
 				cellSizeLambda = pt.get<double>("table.cellSizeLambda.value");
 				threshold = pt.get<double>("table.threshold.value");
-				thresholdKari = pt.get<double>("table.thresholdKari.value");
-			}
-			{
-				// 数を調べる
-				int N = 0;
-				{
-					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.displayDate" ).begin();
-					itr_last = pt.get_child( "table.displayDate" ).end();
-					N = std::distance(itr_first, itr_last);
-				}
-				// 要素の追加
-				displayDate.reserve(N);
-				{
-					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.displayDate" ).begin();
-					itr_last = pt.get_child( "table.displayDate" ).end();
-					for(it = itr_first; it != itr_last; ++it) {
-						displayDate.push_back(it->second.get<int>("value"));
-					}
-				}
+				gamma = pt.get<double>("table.gamma.value");
 			}
 			{
 				displayTimeFrom = pt.get<int>("table.displayTimeFrom.value");
@@ -163,315 +492,274 @@ int main()
 			}
 			{
 				// 領域の確保
-				vValid.resize(numCell);
+				trueIndexToIndex.resize(numValidCell);
 				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.cellIsValid" ).begin();
-				itr_last = pt.get_child( "table.cellIsValid" ).end();
+				itr_first = pt.get_child( "table.trueIndexToIndex" ).begin();
+				itr_last = pt.get_child( "table.trueIndexToIndex" ).end();
 				for(it = itr_first; it != itr_last; ++it) {
 					std::size_t i = std::distance(itr_first, it);
-					vValid[i] = it->second.get<bool>("value");
-				}
-			}
-			{
-				demandCircleRange.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.demandCircleRange" ).begin();
-				itr_last = pt.get_child( "table.demandCircleRange" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					// itはptree::value_typeのイテレータ
-					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
-					itr_first_c = it->second.get_child( "" ).begin();
-					itr_last_c = it->second.get_child( "" ).end();
-					std::size_t i = std::distance(itr_first, it);
-					std::size_t N = std::distance(itr_first_c, itr_last_c);
-					demandCircleRange[i].resize(N);
-					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
-						std::size_t j = std::distance(itr_first_c, it_c);
-						demandCircleRange[i][j] = it_c->second.get<int>("value");
-					}
-				}
-			}
-			{
-				vacantCircleRange.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.vacantCircleRange" ).begin();
-				itr_last = pt.get_child( "table.vacantCircleRange" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					// itはptree::value_typeのイテレータ
-					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
-					itr_first_c = it->second.get_child( "" ).begin();
-					itr_last_c = it->second.get_child( "" ).end();
-					std::size_t i = std::distance(itr_first, it);
-					std::size_t N = std::distance(itr_first_c, itr_last_c);
-					vacantCircleRange[i].resize(N);
-					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
-						std::size_t j = std::distance(itr_first_c, it_c);
-						vacantCircleRange[i][j] = it_c->second.get<int>("value");
-					}
+					trueIndexToIndex[i] = it->second.get<int>("index");
 				}
 			}
 		}
 	}
 
-	// demandCircleRangeの確認
-	// {
-	// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
-	// 		int N = demandCircleRange[i].size();
-	// 		if (N >= 2) {
-	// 			std::cout << "[" << i+1 << ", num = " << N-1 << "] : ";
-	// 			for (int j = 0; j < N; j++) {
-	// 				std::cout << demandCircleRange[i][j] << ", " ;
-	// 			}
-	// 			std::cout << "\n";
-	// 		}
-	// 	}
-	// }
-
-    // 需要数を取得する
-	std::vector<int> vDemand(numCell, 0);
+	DataFactor dataFactor;
+	// ニューラルネットワークの入力層のデータの取得
 	{
-		// currentTime.xmlを取得
-		boost::posix_time::ptime cTime;
+		// 読み込みファイル名
+		const std::string fileName = "inputNeural.xml";
+		// 読み込みファイル先のディレクトリのmakefileからの相対位置
+		const std::string fileDire = "./../Data/1_Cron/FromServer";
+		std::string fileRela = fileDire + "/" + fileName;
 		{
+			// create an empty property tree
 			boost::property_tree::ptree pt;
-			// 設定値読み込みファイル名
-			const std::string fileName = "currentTime.xml";
-			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/FromServer";
-			std::string fileRela = fileDire + "/" + fileName;
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
 			{
-				// 文字列の取得
-				std::string timeStr = pt.get<std::string>("table.data.currentTime");
-				// 空文字の削除
-				boost::trim (timeStr);
-				// boost::posix_time::ptime 型に変換
-				cTime = boost::posix_time::time_from_string(timeStr);
-			}
-		}
-		// data.xmlを取得
-		// create an empty property tree
-		boost::property_tree::ptree pt;
-		{
-			// 設定値読み込みファイル名
-			const std::string fileName = "data.xml";
-			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/FromServer";
-			std::string fileRela = fileDire + "/" + fileName;
-			// read the xml file
-			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
-		}
-		// CurrentTimeを丸める
-		{
-			cTime = roundPTime(cTime, discreteTimeWidth);
-		}
-		// データ抽出条件の計算
-		std::vector<boost::posix_time::ptime> vCTimeStart;
-		std::vector<boost::posix_time::ptime> vCTimeEnd;
-		{
-			int N = displayDate.size();
-			// ベクトルの要素の追加
-			{
-				vCTimeStart.reserve(N);
-				vCTimeEnd.reserve(N);
-			}
-			// 値の登録
-			{
-				// displayTimeFrom(=-2)はdiscreteTimeWidth(=2)何個分(=-1)か
-				int numPre = round(displayTimeFrom / (double)discreteTimeWidth);
-				// displayTimeTo(=4)はdiscreteTimeWidth(=2)何個分(=2)か
-				int numPost = round(displayTimeTo / (double)discreteTimeWidth);
-				for (int i = 0; i < N; i++) {
-					vCTimeStart[i] = cTime + ( - boost::gregorian::days(displayDate[i]) );
-					vCTimeStart[i] += boost::posix_time::seconds( numPre * discreteTimeWidth * 60 - discreteTimeWidth * 30 );
-					vCTimeEnd[i] = cTime + ( - boost::gregorian::days(displayDate[i]) );
-					vCTimeEnd[i] += boost::posix_time::seconds( numPost * discreteTimeWidth * 60 + discreteTimeWidth * 30 );
-					// std::cout << "[" << vCTimeStart[i] << "]" << "[" << vCTimeEnd[i] << "]" << "\n";
-				}
-			}
-		}
-
-		// メモ
-		// table-date-startDate
-		//           -startPoint-latitude
-		//                      -longitude
-
-		// ptを解析していき需要数をカウントしていく
-		{
-			boost::property_tree::ptree::iterator itr_first, itr_last, it;
-			itr_first = pt.get_child( "table" ).begin();
-			itr_last = pt.get_child( "table" ).end();
-			for(it = itr_first; it != itr_last; it++) {
-				// startPointを取得
-				GeographicCoordinate gCoorHoge;
-				gCoorHoge.setPhi( it->second.get<double>("startPoint.latitude") );
-				gCoorHoge.setLambda( it->second.get<double>("startPoint.longitude") );
-				int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
-				int col = calculateColFromLongitudes( gCoorHoge.getLambda(), gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
-				int index = calculateIndexFromRowCol( row, col, numRow, numCol );
-				// 範囲外だとindex = 0になる
-				if( index != 0 ) {
-					// 有効なセルかどうか
-					bool isValid = vValid[index-1];
-					if (isValid) {
+				{
+					{
 						// startDateを取得する
-						std::string sTimeStr = it->second.get<std::string>("startDate");
+						std::string sTimeStr = pt.get<std::string>("table.startDate");
 						// 空文字の除去
 						boost::trim (sTimeStr);
 						// boost::posix_time::ptime 型に変換
-						boost::posix_time::ptime sTime = boost::posix_time::time_from_string(sTimeStr);
-						// Does there exist i s.t. vTimeStart[i] <= sTime < vTimeEnd[i]?
-						bool exists = false;
-						{
-							int N = displayDate.size();
-							for (int i = 0; i < N; i++) {
-								exists = ( ( vCTimeStart[i] <= sTime ) && ( sTime < vCTimeEnd[i] ) );
-								if (exists) {
-									break;
-								}
-							}
-						}
-						if (exists) {
-							// 需要数のカウントアップ
-							vDemand[index - 1]++;
-						}
+						boost::posix_time::ptime pTime = boost::posix_time::time_from_string(sTimeStr);
+						dataFactor.pTimeRound = roundPTime(pTime, 1);
+					}
+					dataFactor.maxTemp = pt.get<double>("table.maxTemp");
+					dataFactor.minTemp = pt.get<double>("table.minTemp");
+					dataFactor.dayW = pt.get<double>("table.dayW");
+					dataFactor.nightW = pt.get<double>("table.nightW");
+				}
+				{
+					boost::posix_time::ptime pTime = dataFactor.pTimeRound;
+					dataFactor.step = getStep(pTime, 1);
+					dataFactor.day_5_10_20_lastDay = evaluateDay_5_10_20_lastDay(pTime, 1);
+					dataFactor.holiday = evaluateHoliday(pTime, 1);
+					dataFactor.month12to2 = evaluateMonth12to2(pTime, 1);
+					dataFactor.month3to5 = evaluateMonth3to5(pTime, 1);
+					dataFactor.month6to8 = evaluateMonth6to8(pTime, 1);
+					dataFactor.month9to11 = evaluateMonth9to11(pTime, 1);
+				}
+			}
+		}
+	}
+	if (displayDataFactor) {
+		std::cout << "現在時刻" << "\n";
+		std::cout << "[pTimeRound]" << dataFactor.pTimeRound;
+		std::cout << "[step]" << dataFactor.step;
+		std::cout << "[day_5_10_20_lastDay]" << dataFactor.day_5_10_20_lastDay;
+		std::cout << "[holiday]" << dataFactor.holiday;
+		std::cout << "[month12to2]" << dataFactor.month12to2;
+		std::cout << "[month3to5]" << dataFactor.month3to5;
+		std::cout << "[month6to8]" << dataFactor.month6to8;
+		std::cout << "[month9to11]" << dataFactor.month9to11;
+		std::cout << "[maxTemp]" << dataFactor.maxTemp;
+		std::cout << "[minTemp]" << dataFactor.minTemp;
+		std::cout << "[dayW]" << dataFactor.dayW;
+		std::cout << "[nightW]" << dataFactor.nightW;
+		std::cout << "\n";
+	}
+
+	// ニューラルネットワークに入力するデータ個数
+	int num = 0;
+	// 何分前か
+	int preMin = 0;
+	// 何分後か
+	int postMin = 0;
+	{
+		// displayTimeFrom(=-2)はdiscreteTimeWidth(=2)何個分(=-1)か
+		int numPre = round(displayTimeFrom / (double)discreteTimeWidth);
+		// displayTimeTo(=4)はdiscreteTimeWidth(=2)何個分(=2)か
+		int numPost = round(displayTimeTo / (double)discreteTimeWidth);
+
+		preMin = numPre * discreteTimeWidth;
+		postMin = numPost * discreteTimeWidth;
+		num = postMin - preMin + 1;
+	}
+
+	// ニューラルネットワークに入力するデータ
+	std::vector<DataFactor> vDataFactor(num, dataFactor);
+	{
+		std::vector<int> vMin(num);
+		{
+			vMin[0] = preMin;
+			if (num != 1) {
+				for (int i = 1; i < num; i++) {
+					vMin[i] = vMin[i - 1] + 1;
+				}
+			}
+		}
+		for (int i = 0; i < num; i++) {
+			vDataFactor[i].pTimeRound += boost::posix_time::seconds(vMin[i] * 60);
+			{
+				boost::posix_time::ptime pTime = vDataFactor[i].pTimeRound;
+				vDataFactor[i].step = getStep(pTime, 1);
+				vDataFactor[i].day_5_10_20_lastDay = evaluateDay_5_10_20_lastDay(pTime, 1);
+				vDataFactor[i].holiday = evaluateHoliday(pTime, 1);
+				vDataFactor[i].month12to2 = evaluateMonth12to2(pTime, 1);
+				vDataFactor[i].month3to5 = evaluateMonth3to5(pTime, 1);
+				vDataFactor[i].month6to8 = evaluateMonth6to8(pTime, 1);
+				vDataFactor[i].month9to11 = evaluateMonth9to11(pTime, 1);
+			}
+		}
+	}
+	if (displayDataFactor) {
+		std::cout << "ニューラルネットワークに入力するデータ" << "\n";
+		for (int i = 0; i < (int)vDataFactor.size(); i++) {
+			std::cout << "[pTimeRound]" << vDataFactor[i].pTimeRound;
+			std::cout << "[step]" << vDataFactor[i].step;
+			std::cout << "[day_5_10_20_lastDay]" << vDataFactor[i].day_5_10_20_lastDay;
+			std::cout << "[holiday]" << vDataFactor[i].holiday;
+			std::cout << "[month12to2]" << vDataFactor[i].month12to2;
+			std::cout << "[month3to5]" << vDataFactor[i].month3to5;
+			std::cout << "[month6to8]" << vDataFactor[i].month6to8;
+			std::cout << "[month9to11]" << vDataFactor[i].month9to11;
+			std::cout << "[maxTemp]" << vDataFactor[i].maxTemp;
+			std::cout << "[minTemp]" << vDataFactor[i].minTemp;
+			std::cout << "[dayW]" << vDataFactor[i].dayW;
+			std::cout << "[nightW]" << vDataFactor[i].nightW;
+			std::cout << "\n";
+		}
+	}
+
+	// ニューラルネットワークで需要数と総需要数を取得
+	std::vector<double> res(numValidCell + 1, 0);
+	{
+		for (int i = 0; i < num; i++) {
+			// Netを取得する
+			// caffe::Net<float> net_test("train_test.prototxt", caffe::TEST);
+			caffe::Net<double> testNet("Source/train_test.prototxt", caffe::TEST);
+			// 訓練されたネットを取得する
+			testNet.CopyTrainedLayersFrom("./../Data/0_3_Learn/Other/Neural_iter_50000.caffemodel");
+			// // 予測する
+			const boost::shared_ptr<caffe::MemoryDataLayer<double> > input_test_layer = boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>( testNet.layer_by_name("input") );
+			const boost::shared_ptr<caffe::MemoryDataLayer<double> > target_test_layer = boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>( testNet.layer_by_name("target") );
+			// ミニバッチの変更
+			// batchSize = 100 -> batchSize = 1
+			int batchSize = 1;
+			input_test_layer->set_batch_size(batchSize);
+			target_test_layer->set_batch_size(batchSize);
+
+			int numData = 1 * batchSize;
+			constexpr int numInputVar = 1440 + 1 + 1 + 4 + 4; // (step(1440), その他(10))
+			int numOutputVar = numValidCell + 1;	  // 有効なセルの数 + 需要数の合計
+			std::vector<double> input_test_data( numInputVar * numData, 0 );
+			std::vector<double> target_test_data( numOutputVar * numData, 0 );
+			std::vector<double> dummy_test_data( numData, 0 );
+			// input_test_dataにデータを詰める
+			{
+				input_test_data[vDataFactor[i].step - 1]++; // stepは1から1440
+				input_test_data[1440 - 1 + 1] = vDataFactor[i].day_5_10_20_lastDay;
+				input_test_data[1440 - 1 + 2] = vDataFactor[i].holiday;
+				input_test_data[1440 - 1 + 3] = vDataFactor[i].month12to2;
+				input_test_data[1440 - 1 + 4] = vDataFactor[i].month3to5;
+				input_test_data[1440 - 1 + 5] = vDataFactor[i].month6to8;
+				input_test_data[1440 - 1 + 6] = vDataFactor[i].month9to11;
+				input_test_data[1440 - 1 + 7] = vDataFactor[i].maxTemp;
+				input_test_data[1440 - 1 + 8] = vDataFactor[i].minTemp;
+				input_test_data[1440 - 1 + 9] = vDataFactor[i].dayW;
+				input_test_data[1440 - 1 + 10] = vDataFactor[i].nightW;
+			}
+
+			// 層のリセット
+			input_test_layer -> caffe::MemoryDataLayer<double>::Reset( &input_test_data[0], &dummy_test_data[0], numData);
+			target_test_layer -> caffe::MemoryDataLayer<double>::Reset( &target_test_data[0], &dummy_test_data[0], numData);
+
+			// 順伝播計算
+			testNet.Forward();
+
+			// demands[i]に計算結果を詰める
+			res[numOutputVar - 1] += testNet.blob_by_name("ip2")->cpu_data()[numOutputVar - 1];
+			for(int j = 0; j < numOutputVar - 1; j++) {
+				res[j] += testNet.blob_by_name("ip2")->cpu_data()[j];
+			}
+		}
+	}
+
+	if (displayDemand) {
+		// 値の確認
+		std::cout << "各有効セルでの需要数(1より大きい)" << "\n";
+		for (int i = 0; i < numValidCell; i++) {
+			if (res[i] > 1) {
+				std::cout << "[" << res[i] << "]";
+			}
+		}
+		std::cout << "\n";
+		std::cout << "[総需要数]" << res[numValidCell] << "\n";
+	}
+
+	// サークルを描画するtrueIndexを取得
+	std::vector<int> vTrueIndex;
+	{
+		if (simpleVersion) {
+			for (int i = 0; i < numValidCell; i++) {
+				if (res[i] >= threshold) {
+					vTrueIndex.push_back(i + 1);
+				}
+			}
+		}else{
+			std::vector<double> resHoge(numValidCell, 0);
+			std::vector<double> demandDist(numValidCell, 0);
+			double sumCellDemand = 0;
+			{
+				for (int i = 0; i < numValidCell; i++) {
+					if (res[i] > 0) {
+						demandDist[i] = res[i];
+					}
+				}
+				sumCellDemand = std::accumulate(demandDist.begin(), demandDist.end(), 0.0);
+				if (sumCellDemand != 0) {
+					for (int j = 0; j < numValidCell; j++) {
+						demandDist[j] /= sumCellDemand;
 					}
 				}
 			}
-		}
-	}
-
-	// std::cout << "総需要数 : " << std::accumulate(vDemand.begin(), vDemand.end(), 0.0) << std::endl;
-	// std::cout << "需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vDemand[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [demand]" << vDemand[i] << "\n";
-	// 	}
-	// }
-
-	// 空車数を取得する
-	std::vector<int> vVacantTaxi(numCell, 0);
-	{
-		// taxiPositions.xmlを取得
-		// create an empty property tree
-		boost::property_tree::ptree pt;
-		{
-			// 設定値読み込みファイル名
-			const std::string fileName = "taxiPositions.xml";
-			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/FromServer";
-			std::string fileRela = fileDire + "/" + fileName;
-			// read the xml file
-			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
-		}
-
-		// メモ
-		// table-date-id
-		//           -status
-		//           -position-latitude
-		//                    -longitude
-
-		// ptを解析していき空車数をカウントしていく
-		{
-			boost::property_tree::ptree::iterator itr_first, itr_last, it;
-			itr_first = pt.get_child( "table" ).begin();
-			itr_last = pt.get_child( "table" ).end();
-			for(it = itr_first; it != itr_last; it++) {
-				// statusを取得
-				int statusHoge = it->second.get<int>("status");
-				if (statusHoge == 0) {
-					// 空車であれば
-					// positionを取得
-					GeographicCoordinate gCoorHoge;
-					gCoorHoge.setPhi( it->second.get<double>("position.latitude") );
-					gCoorHoge.setLambda( it->second.get<double>("position.longitude") );
-					int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
-					int col = calculateColFromLongitudes( gCoorHoge.getLambda(), gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
-					int index = calculateIndexFromRowCol( row, col, numRow, numCol );
-					// 範囲外だとindex = 0になる
-					if( index != 0 ) {
-						// 有効なセルかどうか
-						bool isValid = vValid[index-1];
-						if (isValid) {
-							vVacantTaxi[index - 1]++;
-						}
+			double sumDemand = ceil(res[numValidCell]);
+			{
+				if (sumCellDemand != 0 && sumDemand != 0) {
+					// demandDistとgammaとsumDemandを基にdemandをresHogeに分配する
+					gamma = gamma / (double)sumDemand;
+					std::vector<double>::iterator it, itr_first;
+					itr_first = demandDist.begin();
+					while (sumDemand > 0) {
+						// 最大要素のイテレータを取得
+						it = std::max_element(demandDist.begin(), demandDist.end());
+						*it -= gamma;
+						std::size_t index = std::distance(itr_first, it); // std::distance(itr_first, itr_first) == 0
+						resHoge[(int)index] = resHoge[(int)index] + 1;
+						sumDemand = sumDemand - 1;
 					}
 				}
 			}
-		}
-	}
-
-	// std::cout << "総空車数 : " << std::accumulate(vVacantTaxi.begin(), vVacantTaxi.end(), 0.0) << std::endl;
-	// std::cout << "需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vVacantTaxi[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [vacant]" << vVacantTaxi[i] << "\n";
-	// 	}
-	// }
-
-	// 有効な各セルでサークル内の需要数と空車数を取得
-	std::vector<int> vDemandCircle(numCell, 0);
-	std::vector<int> vVacantTaxiCircle(numCell, 0);
-	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				int N1 = demandCircleRange[i].size();
-				int N2 = vacantCircleRange[i].size();
-				for (int j = 1; j < N1; j++) {
-					vDemandCircle[i] += vDemand[demandCircleRange[i][j] - 1];
-				}
-				for (int j = 1; j < N2; j++) {
-					vVacantTaxiCircle[i] += vVacantTaxi[vacantCircleRange[i][j] - 1];
+			for (int i = 0; i < numValidCell; i++) {
+				if (resHoge[i] >= threshold) {
+					vTrueIndex.push_back(i + 1);
 				}
 			}
 		}
 	}
 
-	// std::cout << "サークル需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vDemandCircle[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [demand]" << vDemandCircle[i] << "\n";
-	// 	}
-	// }
-
-	// std::cout << "サークル空車数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vVacantTaxiCircle[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [vacant]" << vVacantTaxiCircle[i] << "\n";
-	// 	}
-	// }
-
-	// threshold以上の需要を持つvDemandCircleのindexと需要数のペアをを生成し小さい順に並べる
-	std::vector<PairIndexDemand> vDemandIndexNotLessThanThreshold;
-	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				if (vDemandCircle[i] >= threshold) {
-					PairIndexDemand pairHoge;
-					pairHoge.index = i + 1;
-					pairHoge.demand = vDemandCircle[i];
-					vDemandIndexNotLessThanThreshold.push_back(pairHoge);
-				}
-			}
-		}
-		// 需要に関してソート
-		{
-			std::vector<PairIndexDemand>::iterator it, itr_first, itr_last;
-			itr_first = vDemandIndexNotLessThanThreshold.begin();
-			itr_last = vDemandIndexNotLessThanThreshold.end();
-			sort(itr_first, itr_last, MyNotLessDefinition());
-		}
-	}
 	// 確認
-	// for (int i = 0; i < (int)vDemandIndexNotLessThanThreshold.size(); i++) {
-	// 	std::cout << "[index] : " << vDemandIndexNotLessThanThreshold[i].index << " [demand] : " << vDemandIndexNotLessThanThreshold[i].demand << "\n";
-	// }
+	if (displayTrueIndex) {
+		int N = vTrueIndex.size();
+		if (N >= 1) {
+			for (int i = 0; i < N; i++) {
+				std::cout << "[" << vTrueIndex[i] << "]";
+			}
+			std::cout << "\n";
+		}else{
+			std::cout << "描画するサークルはない" << "\n";
+		}
+	}
 
-	int numPossibleCircle = vDemandIndexNotLessThanThreshold.size();
-	if (numPossibleCircle == 0) {
-		{
-			// 空のオブジェクトファイルの生成
+	// circlePosition.xmlの作成
+	{
+		int N = vTrueIndex.size();
+		if (N == 0) {
+			// 空のサークル情報をを作成
 			try {
 				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyCirclePosition.xml");
 				boost::filesystem::path dst("./../Data/1_Cron/Other/circlePoints.xml");
@@ -480,161 +768,21 @@ int main()
 				std::cout << "failure!" << "\n";
 				return EXIT_FAILURE;
 			}
-			// 空のArrayデータの生成
-			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyIndexArray.xml");
-				boost::filesystem::path dst("./../Data/1_Cron/Other/indexUnderThresholdKari.xml");
-				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-			} catch (std::exception& e) {
-				std::cout << "failure!" << "\n";
-				return EXIT_FAILURE;
-			}
-			// 空のArrayデータの生成
-			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyIndexArray.xml");
-				boost::filesystem::path dst("./../Data/1_Cron/Other/indexNotLessThanThresholdKari.xml");
-				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-			} catch (std::exception& e) {
-				std::cout << "failure!" << "\n";
-				return EXIT_FAILURE;
-			}
-		}
-		return EXIT_SUCCESS;
-	}
-
-	// vDemandIndexNotLessThanThresholdの間引きをする
-	// 需要サークルのフラグ
-	std::vector<bool> circleFlag1(numCell, false);
-	// サークルの重なりを防ぐためのフラグ
-	std::vector<bool> circleFlag2(numCell, false);
-	{
-		auto itr = vDemandIndexNotLessThanThreshold.begin();
-		while (itr != vDemandIndexNotLessThanThreshold.end()) {
-			bool removeCondition = false;
-			int indexCircle = itr->index;
-			if (circleFlag2[indexCircle - 1] == true) {
-				// 重なりがあるため削除
-				removeCondition = true;
-			}else{
-				// circleFlag1の更新
-				{
-					int N = demandCircleRange[indexCircle -1].size();
-					for (int i = 1; i < N; i++) {
-						circleFlag1[demandCircleRange[indexCircle - 1][i] - 1] = true;
-					}
-				}
-				// circleFlag2の更新
-				{
-					int N = vacantCircleRange[indexCircle -1].size();
-					for (int i = 1; i < N; i++) {
-						circleFlag2[vacantCircleRange[indexCircle - 1][i] - 1] = true;
-					}
-				}
-			}
-			if (removeCondition) {
-				itr = vDemandIndexNotLessThanThreshold.erase(itr);
-			}else{
-				itr++;
-			}
-		}
-	}
-
-	// circleFlag1の保存
-	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				// 保存ファイル名
-				const std::string fileName = boost::lexical_cast<std::string>( i + 1 ) + ".xml";
-				// 保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
-				// 保存path
-				std::string fileRela = fileDire + "/" + fileName;
-				// create an empty property tree
-				boost::property_tree::ptree pt;
-
-				// create the root element
-				boost::property_tree::ptree& root = pt.put("table", "");
-
-				// add child elements
-				{
-					{
-						boost::property_tree::ptree& child = root.add("isOnCircle", "");
-						child.put("value", circleFlag1[i]);
-					}
-				}
-
-				// output
-				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
-		}
-	}
-
-	// // 確認
-	// for (int i = 0; i < (int)vDemandIndexNotLessThanThreshold.size(); i++) {
-	// 	std::cout << "[index] : " << vDemandIndexNotLessThanThreshold[i].index << " [demand] : " << vDemandIndexNotLessThanThreshold[i].demand << "\n";
-	// }
-	// vDemandIndexNotLessThanThresholdに登録してるindexを位置情報に変換し，保存
-	{
-		int N = vDemandIndexNotLessThanThreshold.size();
-		std::vector<GeographicCoordinate> vRepresentativePoint(N);
-		for (int i = 0; i < N; i++) {
-			int indexCircle = vDemandIndexNotLessThanThreshold[i].index;
-			int row = calculateRowFromIndex( indexCircle, numCol, numCell );
-			int col = calculateColFromIndex( indexCircle, numCol, numCell );
-			vRepresentativePoint[i].setPhi( gCoorNW.getPhi() - row * cellSizePhi + cellSizePhi / 2.0 );
-			vRepresentativePoint[i].setLambda( gCoorNW.getLambda() + col * cellSizeLambda - cellSizeLambda / 2.0 );
-		}
-		// 保存
-		{
-			// 保存ファイル名
-			const std::string fileName = "circlePoints.xml";
-			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/Other";
-			// 保存path
-			std::string fileRela = fileDire + "/" + fileName;
-			// create an empty property tree
-			boost::property_tree::ptree pt;
-
-			// create the root element
-			boost::property_tree::ptree& root = pt.put("table", "");
-
-			// add child elements
-			{
-				for (int i = 0; i < N; i++) {
-					boost::property_tree::ptree& child = root.add("data", "");
-					child.put("latitude", vRepresentativePoint[i].getPhi());
-					child.put("longitude", vRepresentativePoint[i].getLambda());
-				}
-			}
-			// output
-			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-		}
-	}
-
-	// indexUnderThresholdKari.xmlとindexNotLessThanThresholdKari.xmlの作成
-	{
-		std::vector<int> vDemandIndex1;
-		vDemandIndex1.reserve(numCell+1);
-		vDemandIndex1.push_back(-1);
-		std::vector<int> vDemandIndex2;
-		vDemandIndex2.reserve(numCell+1);
-		vDemandIndex2.push_back(-1);
-		// theresholdKari以上の需要を持つセルとthresholdKari未満0より大きい需要を持つセルのindexの保存
-		{
-			int N = vDemandIndexNotLessThanThreshold.size();
+		}else{
+			std::vector<GeographicCoordinate> vGCoor(N);
 			for (int i = 0; i < N; i++) {
-				int indexCircle = vDemandIndexNotLessThanThreshold[i].index;
-				int demandKariCircle = vDemandIndexNotLessThanThreshold[i].demand - vDemandCircle[indexCircle - 1];
-				if (demandKariCircle >= thresholdKari) {
-					vDemandIndex1.push_back(indexCircle);
-				}else if(demandKariCircle < thresholdKari && demandKariCircle > 0){
-					vDemandIndex2.push_back(indexCircle);
-				}
+				int trueIndex = vTrueIndex[i];
+				int index = trueIndexToIndex[trueIndex - 1];
+				// indexを位置情報に変換する．
+				int row = calculateRowFromIndex( index, numCol, numCell );
+				int col = calculateColFromIndex( index, numCol, numCell );
+				vGCoor[i].setPhi( gCoorNW.getPhi() - row * cellSizePhi + cellSizePhi / 2.0 );
+				vGCoor[i].setLambda( gCoorNW.getLambda() + col * cellSizeLambda - cellSizeLambda / 2.0 );
 			}
-			// indexUpperThresholdKari.xmlに保存
+			// vGCoorの登録
 			{
 				// 保存ファイル名
-				const std::string fileName = "indexNotLessThanThresholdKari.xml";
+				const std::string fileName = "circlePoints.xml";
 				// 保存ファイル先のディレクトリのmakefileからの相対位置
 				const std::string fileDire = "./../Data/1_Cron/Other";
 				// 保存path
@@ -647,48 +795,17 @@ int main()
 
 				// add child elements
 				{
-					int N = vDemandIndex1.size();
 					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vDemandIndex1[i]);
+						boost::property_tree::ptree& child = root.add("data", "");
+						child.put("latitude", vGCoor[i].getPhi());
+						child.put("longitude", vGCoor[i].getLambda());
 					}
 				}
-
-				// output
-				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
-
-			// indexUpperThresholdKari.xmlに保存
-			{
-				// 設定値保存ファイル名
-				const std::string fileName = "indexUnderThresholdKari.xml";
-				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/1_Cron/Other";
-				// 保存path
-				std::string fileRela = fileDire + "/" + fileName;
-				// create an empty property tree
-				boost::property_tree::ptree pt;
-
-				// create the root element
-				boost::property_tree::ptree& root = pt.put("table", "");
-
-				// add child elements
-				{
-					int N = vDemandIndex2.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vDemandIndex2[i]);
-					}
-				}
-
 				// output
 				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 			}
 		}
 	}
-
-
-
 
     return EXIT_SUCCESS;
 }

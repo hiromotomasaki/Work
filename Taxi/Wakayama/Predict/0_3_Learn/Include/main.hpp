@@ -32,6 +32,13 @@
 #include <boost/algorithm/string.hpp> /* boost::trim */
 /* http://www.boost.org/doc/libs/1_61_0/boost/algorithm/string.hpp */
 
+#include <boost/random.hpp>
+
+#include <glog/logging.h>
+
+#include <caffe/caffe.hpp>
+#include <caffe/layers/memory_data_layer.hpp>
+
 namespace hiro {
 
 } // namespace hiro
