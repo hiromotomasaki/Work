@@ -103,8 +103,10 @@ int main()
 	std::vector<bool> vValid;
 	// 需要数をカウントするサークル情報
 	std::vector<std::vector<int>> demandCircleRange;
-	// 空車数をカウントするサークル情報（需要数をカウントするサークルの2倍の直径）
+	// 空車数をカウントするサークル情報
 	std::vector<std::vector<int>> vacantCircleRange;
+	// サークルの重なりを防ぐフラグを立てるためのサークル情報
+	std::vector<std::vector<int>> demandCircleOccupancyRange;
 	// ----------------------------------------------------- //
 
 	// Data/0_2_Set/InputDataFor1_Cron.xmlから読み込む
@@ -210,10 +212,29 @@ int main()
 					}
 				}
 			}
+			{
+				demandCircleOccupancyRange.resize(numCell);
+				boost::property_tree::ptree::iterator itr_first, itr_last, it;
+				itr_first = pt.get_child( "table.demandCircleOccupancyRange" ).begin();
+				itr_last = pt.get_child( "table.demandCircleOccupancyRange" ).end();
+				for(it = itr_first; it != itr_last; ++it) {
+					// itはptree::value_typeのイテレータ
+					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
+					itr_first_c = it->second.get_child( "" ).begin();
+					itr_last_c = it->second.get_child( "" ).end();
+					std::size_t i = std::distance(itr_first, it);
+					std::size_t N = std::distance(itr_first_c, itr_last_c);
+					demandCircleOccupancyRange[i].resize(N);
+					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
+						std::size_t j = std::distance(itr_first_c, it_c);
+						demandCircleOccupancyRange[i][j] = it_c->second.get<int>("value");
+					}
+				}
+			}
 		}
 	}
 
-	// demandCircleRangeの確認
+	// // demandCircleRangeの確認
 	// {
 	// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
 	// 		int N = demandCircleRange[i].size();
@@ -342,7 +363,8 @@ int main()
 		}
 	}
 
-	// std::cout << "総需要数 : " << std::accumulate(vDemand.begin(), vDemand.end(), 0.0) << std::endl;
+	// std::cout << "総需要数 : " << std::accumulate(vDemand.begin(), vDemand.end(), 0.0) << std::endl
+		;
 	// std::cout << "需要数の確認" << "\n";
 	// for (int i = 0; i < numCell; i++) {
 	// 	if (vDemand[i] >= 1) {
@@ -430,7 +452,7 @@ int main()
 
 	// std::cout << "サークル需要数の確認" << "\n";
 	// for (int i = 0; i < numCell; i++) {
-	// 	if (vDemandCircle[i] >= 1) {
+	// 	if (vDemandCircle[i] >= 2) {
 	// 		std::cout << "[index]" << i+1 << ", [demand]" << vDemandCircle[i] << "\n";
 	// 	}
 	// }
@@ -442,7 +464,7 @@ int main()
 	// 	}
 	// }
 
-	// threshold以上の需要を持つvDemandCircleのindexと需要数のペアをを生成し小さい順に並べる
+	// threshold以上の需要を持つvDemandCircleのindexと需要数のペアを生成し小さい順に並べる
 	std::vector<PairIndexDemand> vDemandIndexNotLessThanThreshold;
 	{
 		for (int i = 0; i < numCell; i++) {
@@ -463,7 +485,7 @@ int main()
 			sort(itr_first, itr_last, MyNotLessDefinition());
 		}
 	}
-	// 確認
+	// // 確認
 	// for (int i = 0; i < (int)vDemandIndexNotLessThanThreshold.size(); i++) {
 	// 	std::cout << "[index] : " << vDemandIndexNotLessThanThreshold[i].index << " [demand] : " << vDemandIndexNotLessThanThreshold[i].demand << "\n";
 	// }
@@ -504,30 +526,36 @@ int main()
 
 	// vDemandIndexNotLessThanThresholdの間引きをする
 	// 需要サークルのフラグ
-	std::vector<bool> circleFlag1(numCell, false);
+	std::vector<bool> demandCircleRangeFlag(numCell, false);
 	// サークルの重なりを防ぐためのフラグ
-	std::vector<bool> circleFlag2(numCell, false);
+	std::vector<bool> demandCircleOccupancyRangeFlag(numCell, false);
 	{
 		auto itr = vDemandIndexNotLessThanThreshold.begin();
 		while (itr != vDemandIndexNotLessThanThreshold.end()) {
 			bool removeCondition = false;
-			int indexCircle = itr->index;
-			if (circleFlag2[indexCircle - 1] == true) {
-				// 重なりがあるため削除
-				removeCondition = true;
-			}else{
-				// circleFlag1の更新
-				{
-					int N = demandCircleRange[indexCircle -1].size();
-					for (int i = 1; i < N; i++) {
-						circleFlag1[demandCircleRange[indexCircle - 1][i] - 1] = true;
+			{
+				// すでにdemandCircleOccupancyRangeFlagがtrueであればサークルを書かないのでremoveConditionをtrueにする
+				int indexCircleCenter = itr->index;
+				bool hasMarked = demandCircleOccupancyRangeFlag[indexCircleCenter - 1];
+				if (hasMarked) {
+					// 重なりがあるため削除
+					removeCondition = true;
+				}else{
+					// demandCircleRangeFlagの更新
+					{
+						int N = demandCircleRange[indexCircleCenter - 1].size();
+						for (int i = 1; i < N; i++) {
+							int markedIndex = demandCircleRange[indexCircleCenter - 1][i];
+							demandCircleRangeFlag[markedIndex - 1] = true;
+						}
 					}
-				}
-				// circleFlag2の更新
-				{
-					int N = vacantCircleRange[indexCircle -1].size();
-					for (int i = 1; i < N; i++) {
-						circleFlag2[vacantCircleRange[indexCircle - 1][i] - 1] = true;
+					// demandCircleOccupancyRangeFlagの更新
+					{
+						int N = demandCircleOccupancyRange[indexCircleCenter - 1].size();
+						for (int i = 1; i < N; i++) {
+							int markedIndex = demandCircleOccupancyRange[indexCircleCenter - 1][i];
+							demandCircleOccupancyRangeFlag[markedIndex - 1] = true;
+						}
 					}
 				}
 			}
@@ -539,7 +567,7 @@ int main()
 		}
 	}
 
-	// circleFlag1の保存
+	// demandCircleRangeFlagの保存
 	{
 		for (int i = 0; i < numCell; i++) {
 			if (vValid[i]) {
@@ -559,7 +587,7 @@ int main()
 				{
 					{
 						boost::property_tree::ptree& child = root.add("isOnCircle", "");
-						child.put("value", circleFlag1[i]);
+						child.put("value", demandCircleRangeFlag[i]);
 					}
 				}
 
@@ -611,27 +639,32 @@ int main()
 		}
 	}
 
-	// indexUnderThresholdKari.xmlとindexNotLessThanThresholdKari.xmlの作成
+	// indexUnderThresholdKari.xmlとindexNotLessThanThresholdKari.xmlの作成と保存
 	{
-		std::vector<int> vDemandIndex1;
-		vDemandIndex1.reserve(numCell+1);
-		vDemandIndex1.push_back(-1);
-		std::vector<int> vDemandIndex2;
-		vDemandIndex2.reserve(numCell+1);
-		vDemandIndex2.push_back(-1);
+		std::vector<int> vKariDemandUnderThresholdKari;
+		std::vector<int> vKariDemandNotLessThanThresholdKari;
+		{
+			int N = vDemandIndexNotLessThanThreshold.size();
+			vKariDemandUnderThresholdKari.reserve(N+1);
+			vKariDemandUnderThresholdKari.push_back(-1);
+			vKariDemandNotLessThanThresholdKari.reserve(N+1);
+			vKariDemandNotLessThanThresholdKari.push_back(-1);
+		}
 		// theresholdKari以上の需要を持つセルとthresholdKari未満0より大きい需要を持つセルのindexの保存
 		{
 			int N = vDemandIndexNotLessThanThreshold.size();
 			for (int i = 0; i < N; i++) {
-				int indexCircle = vDemandIndexNotLessThanThreshold[i].index;
-				int demandKariCircle = vDemandIndexNotLessThanThreshold[i].demand - vDemandCircle[indexCircle - 1];
+				int indexCircleCenter = vDemandIndexNotLessThanThreshold[i].index;
+				int demandCircle = vDemandIndexNotLessThanThreshold[i].demand;
+				int vacantCircle = vVacantTaxiCircle[indexCircleCenter - 1];
+				int demandKariCircle = demandCircle - vacantCircle;
 				if (demandKariCircle >= thresholdKari) {
-					vDemandIndex1.push_back(indexCircle);
+					vKariDemandNotLessThanThresholdKari.push_back(indexCircleCenter);
 				}else if(demandKariCircle < thresholdKari && demandKariCircle > 0){
-					vDemandIndex2.push_back(indexCircle);
+					vKariDemandUnderThresholdKari.push_back(indexCircleCenter);
 				}
 			}
-			// indexUpperThresholdKari.xmlに保存
+			// indexNotLessThanThresholdKari.xmlに保存
 			{
 				// 保存ファイル名
 				const std::string fileName = "indexNotLessThanThresholdKari.xml";
@@ -647,10 +680,10 @@ int main()
 
 				// add child elements
 				{
-					int N = vDemandIndex1.size();
+					int N = vKariDemandNotLessThanThresholdKari.size();
 					for (int i = 0; i < N; i++) {
 						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vDemandIndex1[i]);
+						child.put("value", vKariDemandNotLessThanThresholdKari[i]);
 					}
 				}
 
@@ -658,7 +691,7 @@ int main()
 				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 			}
 
-			// indexUpperThresholdKari.xmlに保存
+			// indexUnderThresholdKari.xmlに保存
 			{
 				// 設定値保存ファイル名
 				const std::string fileName = "indexUnderThresholdKari.xml";
@@ -674,10 +707,10 @@ int main()
 
 				// add child elements
 				{
-					int N = vDemandIndex2.size();
+					int N = vKariDemandUnderThresholdKari.size();
 					for (int i = 0; i < N; i++) {
 						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vDemandIndex2[i]);
+						child.put("value", vKariDemandUnderThresholdKari[i]);
 					}
 				}
 

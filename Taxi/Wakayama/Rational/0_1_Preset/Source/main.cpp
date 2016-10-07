@@ -11,25 +11,6 @@ using namespace hiro;
 // 【この関数の目的】
 // Rational関係の設定値のxmlファイルを作成する．
 
-// サークルの重なりの解決方法
-// まず，threshold以上の需要数を持つ全サークルの中心セル番号を取得
-// 大きい順に並べる
-// 上から順番に描画を決定
-// サークルに被覆されるセル(フラグ1)とその周りのもし描画するとサークルが重なる位置となるセル(フラグ2)にフラグを立てる(つまり，サークルが書かれたセルからサークルの直径分の半径の円の領域にフラグが立つ)
-// 描画を決定するときにそのフラグのチェックを行い，立っていれば描画はしないことにする．
-// 描画されるサークルの各需要数からある大きさのサークル内にある空車の数を引き，それをそのセルの仮需要数とする．
-
-// 保存するのは(描画するサークルの位置情報)と(そのサークルのindexと仮需要数のペアとフラグ1情報)
-// 前者は1_Cronの結果として描画に使用され，後者は2_ForEachRequestでオブジェクト生成に使用される．(** に続く)
-
-// **
-// もし，indexTaxiがフラグ1の場所である場合
-// : 空のオブジェクト情報を返す．
-// そうでない場合
-// : まず探索範囲内で仮需要数がしきい値以上ある最も近いサークルの中心セルをindexTargetとしてオブジェクト情報を返す．
-// : もしなければ，仮需要数がしきい値未満，0より大きい最も近いサークルの中心セルをindexTargetとしてオブジェクト情報を返す．
-// : それでもなければ，空のオブジェクト情報を返す．
-
 int myTestFunc();
 int myCreateTestData();
 int myCreateData();
@@ -112,7 +93,6 @@ int myCreateTestData()
 	int displayTimeTo = 4;
 	// セルから描画するオブジェクトの有効範囲の円の半径[m]
 	double searchRange = 3000;
-	// double searchRange = 1000;	// test
 	// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)
 	double searchDegree = 180;
 	// オブジェクト生成の基準となるboxの一辺の長さの最小値
@@ -127,10 +107,12 @@ int myCreateTestData()
 	int discreteTimeWidth = 2;
 	// あるセルに対する需要数カウントのサークルの半径[m]
 	double demandCountCircleRadius = 500;
+	// 2つの需要カウントのサークルの中心点の最小距離[m]
+	double minDistancebetweenDemandCountCircle = 1000;
 	// あるセルに対する空車数カウントのサークルの半径[m]
 	double vacantCountCircleRadius = 1000;
 	// 仮需要のためのしきい値．
-	double thresholdKari = 1;
+	double thresholdKari = 2;
 	// ------------------------------------------- //
 	// ------------------ その他 ----------------- //
 	// 設定値の確認表示をするかどうか
@@ -202,6 +184,8 @@ int myCreateTestData()
 		std::cout << discreteTimeWidth << "\n";
 		std::cout << "--------- あるセルに対する需要数カウントのサークルの半径[m]  ---------" << "\n";
 		std::cout << demandCountCircleRadius << "\n";
+		std::cout << "--------- 2つの需要カウントのサークルの中心点の最小距離[m]  ---------" << "\n";
+		std::cout << minDistancebetweenDemandCountCircle << "\n";
 		std::cout << "--------- あるセルに対する空車数カウントのサークルの半径[m]  ---------" << "\n";
 		std::cout << vacantCountCircleRadius << "\n";
 		std::cout << "--------- 仮需要のためのしきい値  ---------" << "\n";
@@ -327,6 +311,10 @@ int myCreateTestData()
 					child.put("value", demandCountCircleRadius);
 				}
 				{
+					boost::property_tree::ptree& child = root.add("minDistancebetweenDemandCountCircle", "");
+					child.put("value", minDistancebetweenDemandCountCircle);
+				}
+				{
 					boost::property_tree::ptree& child = root.add("vacantCountCircleRadius", "");
 					child.put("value", vacantCountCircleRadius);
 				}
@@ -338,8 +326,8 @@ int myCreateTestData()
 
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
 		}
+	}
 
 	// テスト
 	if (check) {
@@ -412,7 +400,6 @@ int myCreateData()
 	int displayTimeTo = 4;
 	// セルから描画するオブジェクトの有効範囲の円の半径[m]
 	double searchRange = 3000;
-	// double searchRange = 1000;	// test
 	// タクシーの進行方向を考慮した時に描画するオブジェクトの有効範囲の扇型（円に含まれる）の中心角度[deg](45度から180度まで)
 	double searchDegree = 180;
 	// オブジェクト生成の基準となるboxの一辺の長さの最小値
@@ -427,10 +414,12 @@ int myCreateData()
 	int discreteTimeWidth = 2;
 	// あるセルに対する需要数カウントのサークルの半径[m]
 	double demandCountCircleRadius = 500;
+	// 2つの需要カウントのサークルの中心点の最小距離[m]
+	double minDistancebetweenDemandCountCircle = 1000;
 	// あるセルに対する空車数カウントのサークルの半径[m]
 	double vacantCountCircleRadius = 1000;
 	// 仮需要のためのしきい値．
-	double thresholdKari = 1;
+	double thresholdKari = 2;
 	// ------------------------------------------- //
 	// ------------------ その他 ----------------- //
 	// 設定値の確認表示をするかどうか
@@ -502,6 +491,8 @@ int myCreateData()
 		std::cout << discreteTimeWidth << "\n";
 		std::cout << "--------- あるセルに対する需要数カウントのサークルの半径[m]  ---------" << "\n";
 		std::cout << demandCountCircleRadius << "\n";
+		std::cout << "--------- 2つの需要カウントのサークルの中心点の最小距離[m]  ---------" << "\n";
+		std::cout << minDistancebetweenDemandCountCircle << "\n";
 		std::cout << "--------- あるセルに対する空車数カウントのサークルの半径[m]  ---------" << "\n";
 		std::cout << vacantCountCircleRadius << "\n";
 		std::cout << "--------- 仮需要のためのしきい値  ---------" << "\n";
@@ -627,6 +618,10 @@ int myCreateData()
 					child.put("value", demandCountCircleRadius);
 				}
 				{
+					boost::property_tree::ptree& child = root.add("minDistancebetweenDemandCountCircle", "");
+					child.put("value", minDistancebetweenDemandCountCircle);
+				}
+				{
 					boost::property_tree::ptree& child = root.add("vacantCountCircleRadius", "");
 					child.put("value", vacantCountCircleRadius);
 				}
@@ -638,8 +633,8 @@ int myCreateData()
 
 			// output
 			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
 		}
+	}
 
 	// テスト
 	if (check) {

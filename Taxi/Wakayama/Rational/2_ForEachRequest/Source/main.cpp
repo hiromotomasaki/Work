@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 		idTaxi = boost::lexical_cast<int>( argv[1] );
 		idTaxiStr = boost::lexical_cast<std::string>( idTaxi );
 	}
+
 	// idTaxiに対応する位置情報ファイルを読み込む
 	GeographicCoordinate gCoorCur;
 	GeographicCoordinate gCoorPre;
@@ -191,6 +192,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
 	// indexTaxiが有効なセルなのか確認して，有効でなければemptyObject.xmlをコピーして終了
 	{
 		bool check = false;
@@ -241,7 +243,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		if (!check) {
+		if (check) {
 			try {
 				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
@@ -257,12 +259,13 @@ int main(int argc, char *argv[])
 	int dir = 1;
 	{
 		TotalStation tStation = calculateTStationFromGCoor( gCoorPre, gCoorCur );
-		if (tStation.getLength() > maxDistanceFromPreposition) {
+		if (tStation.getLength() > maxDistanceFromPreposition || tStation.getLength() == 0) {
 			dir = 1;
 		}else{
 			dir = myCalculateDir(tStation.getAzimuth());
 		}
 	}
+
     // dirとindexTaxiに対応する探索範囲を取得
 	std::vector<int> searchIndex;
 	{
@@ -300,9 +303,10 @@ int main(int argc, char *argv[])
 	// 1_Cronの結果を取得
 
 	// 0 : 需要はなし
-	// 1 : 需要が集中している
+	bool check_0 = false;
+	// 1 : 需要が集中しているところがある
 	bool check_1 = false;
-	// 2 : 少し需要がある
+	// 2 : 少し需要があるところがある
 	bool check_2 = false;
 
 	std::vector<int> valueOfIndex(numCell, 0);
@@ -385,14 +389,15 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+		check_0 = !(check_1 || check_2);
 	}
 
 	// for (int i = 0; i < numCell; i++) {
-	//	std::cout << valueOfIndex[i] ;
+	// 	std::cout << valueOfIndex[i] ;
 	// }
 	// std::cout << "\n";
 
-	if(!check_1 && !check_2) {
+	if(check_0) {
 		// 営業領域に需要が全く無い
 		try {
 			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
@@ -404,30 +409,36 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	}else{
-		// indexTargetを求める
+		// 指すべきオブジェクトが営業領域内にある
+		// オブジェクトが指すindexTargetを求める
 		int indexTarget = 0;
-		int N = searchIndex.size();
-		bool checkGet_1 = false;
-		bool checkGet_2 = false;
-		for (int i = 0; i < N; i++) {
-			int hoge = valueOfIndex[searchIndex[i] - 1];
-			if (hoge == 1) {
-				indexTarget = searchIndex[i];
-				checkGet_1 = true;
-				break;
-			}else if(hoge == 2) {
-				if (!checkGet_2) {
-					indexTarget = searchIndex[i];
-					checkGet_2 = true;
+		bool existsTarget = false;
+		{
+			int N = searchIndex.size();
+			// bool checkGet_1 = false;
+			bool checkGet_2 = false;
+			for (int i = 0; i < N; i++) {
+				int indexTargetCandidate = searchIndex[i];
+				int valueHoge = valueOfIndex[indexTargetCandidate - 1];
+				if (valueHoge == 1) {
+					indexTarget = indexTargetCandidate;
+					existsTarget = true;
+					// checkGet_1 = true;
+					break;
+				}else if(valueHoge == 2) {
+					if (!checkGet_2) {
+						indexTarget = indexTargetCandidate;
+						existsTarget = true;
+						checkGet_2 = true;
+					}
 				}
 			}
 		}
-		bool checkGet = checkGet_1 || checkGet_2;
-		if (checkGet) {
+		if (existsTarget) {
 			if(indexTaxi != indexTarget) {
 				// indexTaxiとindexTargetに対応するオブジェクト情報をコピーする
 				try {
-						boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + ".xml" );
+					boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + ".xml" );
 					boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 					boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 					return EXIT_SUCCESS;
@@ -438,7 +449,7 @@ int main(int argc, char *argv[])
 			}else{
 				// indexTaxiとindexTargetとdirに対応するオブジェクト情報をコピーする
 				try {
-						boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + "/dir" + boost::lexical_cast<std::string>( dir ) + ".xml" );
+					boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutValidCells/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + "/dir" + boost::lexical_cast<std::string>( dir ) + ".xml" );
 					boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 					boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 					return EXIT_SUCCESS;

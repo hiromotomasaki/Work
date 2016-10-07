@@ -172,6 +172,8 @@ int main()
 	double discreteTimeWidth;
 	// あるセルに対する需要数カウントのサークルの半径[m]
 	double demandCountCircleRadius;
+	// 2つの需要カウントのサークルの中心点の最小距離[m]
+	double minDistancebetweenDemandCountCircle = 1000;
 	// あるセルに対する空車数カウントのサークルの半径[m]
 	double vacantCountCircleRadius;
 	// 仮需要のためのしきい値．
@@ -180,7 +182,6 @@ int main()
 	// ----------------------- その他 ---------------------- //
 	// 設定値の確認表示をするかどうか
 	bool display = true;
-	// bool display = false;
 	// ----------------------------------------------------- //
 
 	// 処理
@@ -284,6 +285,7 @@ int main()
 					threshold = pt.get<double>("table.threshold.value");
 					discreteTimeWidth = pt.get<double>("table.discreteTimeWidth.value");
 					demandCountCircleRadius = pt.get<double>("table.demandCountCircleRadius.value");
+					minDistancebetweenDemandCountCircle = pt.get<double>("table.minDistancebetweenDemandCountCircle.value");
 					vacantCountCircleRadius = pt.get<double>("table.vacantCountCircleRadius.value");
 					thresholdKari = pt.get<double>("table.thresholdKari.value");
 				}
@@ -1081,6 +1083,55 @@ int main()
 				}
 			}
 		}
+		std::vector<std::vector<int>> demandCircleOccupancyRange(numCell);
+		{
+			for (int i = 0; i < numCell; i++) {
+				// int indexTaxi = i + 1;
+				// 有効な各セルでの処理
+				if (vValid[i]) {
+					// indexTaxiに対するindexTarget(詳細情報付き)の集合を求めて保存
+					std::vector<PairIndexTSTation> vPairIndexTSTation;
+					{
+						{
+							for (int j = 0; j < numCell; j++) {
+								int indexTarget = j + 1;
+								PairIndexTSTation pairHoge;
+								// indexTaxiからindexTargetへの測地線長と方位角を取得する
+								pairHoge.tStation = calculateTStationFromGCoor( vRepresentativePoint[i], vRepresentativePoint[j] );
+								bool isWithinNeighborhood = (pairHoge.tStation.getLength() <= minDistancebetweenDemandCountCircle);
+								bool isValidCell = vValid[j];
+								bool isValid = isWithinNeighborhood && isValidCell;
+								if (isValid) {
+									// indexTargetを登録
+									pairHoge.index = indexTarget;
+									// 有効セルの情報ベクトルへプッシュ
+									vPairIndexTSTation.push_back(pairHoge);
+								}
+							}
+						}
+						// 第一辞書を測地線長, 第二辞書を方位角, 第三辞書をindexとしてvPairIndexTSTationをソート
+						{
+							std::vector<PairIndexTSTation>::iterator it, itr_first, itr_last;
+							itr_first = vPairIndexTSTation.begin();
+							itr_last = vPairIndexTSTation.end();
+							sort(itr_first, itr_last, MyLessDefinition());
+						}
+					}
+					// demandCircleOccupancyRange[i]への登録
+					{
+						int N = vPairIndexTSTation.size();
+						demandCircleOccupancyRange[i].resize(1+N);
+						demandCircleOccupancyRange[i][0] = -1;
+						for (int j = 1; j <= N; j++) {
+							demandCircleOccupancyRange[i][j] = vPairIndexTSTation[j-1].index;
+						}
+					}
+				}else{
+					demandCircleOccupancyRange[i].resize(1);
+					demandCircleOccupancyRange[i][0] = -1;
+				}
+			}
+		}
 		// // demandCircleRangeの確認
 		// {
 		// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
@@ -1116,19 +1167,20 @@ int main()
 				// numCol
 				// cellSizePhi
 				// cellSizeLambda
-				// 
+				//
 				// threshold
 				// thresholdKari
-				// 
+				//
 				// displayDate
 				// displayTimeFrom
 				// displayTimeTo
 				// discreteTimeWidth
-				// 
+				//
 				// vValid
 				//
 				// demandCircleRange
 				// vacantCircleRange
+				// demandCircleOccupancyRange
 				// ---------------------- //
 				// gCoorNW
 				{
@@ -1232,6 +1284,19 @@ int main()
 						for (int j = 0; j < M; j++) {
 							boost::property_tree::ptree& ccchild = cchild.add("index", "");
 							ccchild.put("value", vacantCircleRange[i][j]);
+						}
+					}
+				}
+				// demandCircleOccupancyRange
+				{
+					boost::property_tree::ptree& child = root.add("demandCircleOccupancyRange", "");
+					int N = demandCircleOccupancyRange.size();
+					for (int i = 0; i < N; i++) {
+						boost::property_tree::ptree& cchild = child.add("cell", "");
+						int M = demandCircleOccupancyRange[i].size();
+						for (int j = 0; j < M; j++) {
+							boost::property_tree::ptree& ccchild = cchild.add("index", "");
+							ccchild.put("value", demandCircleOccupancyRange[i][j]);
 						}
 					}
 				}
