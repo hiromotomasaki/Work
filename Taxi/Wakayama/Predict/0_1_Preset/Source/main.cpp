@@ -206,9 +206,9 @@ int myCreateData()
 {
 	// ------------- ユーザー入力値  ------------- //
 	// 営業領域の外枠の最北西
-	GeographicCoordinate gCoorNW( 34.275080, 135.138074 );
+	GeographicCoordinate gCoorNW( 34.296332, 135.061091 );
 	// 営業領域の外枠の最南東
-	GeographicCoordinate gCoorSE( 34.178566, 135.242616 );
+	GeographicCoordinate gCoorSE( 34.143423, 135.339895 );
 	// 追加する営業領域の最北西
 	std::vector<GeographicCoordinate> gCoorAddNW;
 	gCoorAddNW.push_back( GeographicCoordinate( 34.284311, 135.183871 ) );

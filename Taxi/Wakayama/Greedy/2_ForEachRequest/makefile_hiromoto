@@ -75,7 +75,7 @@ COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self
 LIBRARY_PATH := -L ~/local/boost/lib
 # リンク時に使用するライブラリを書く.
 # このライブラリは環境変数またはLIBRARY_PATHから見えるところにある.
-LIBRARY := -lboost_system -lboost_filesystem -lboost_date_time
+LIBRARY := -lboost_system -lboost_filesystem -lboost_thread
 # --------------------------------------------------------------------- #
 
 # ======================================================================= #

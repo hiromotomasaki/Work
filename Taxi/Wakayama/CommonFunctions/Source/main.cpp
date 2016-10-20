@@ -425,6 +425,42 @@ int test_9_coordinate_calculateTStationFromCCoor(void)
 	return EXIT_SUCCESS;
 }
 
+int test_10_GeographicCoordinatePair(void);
+int test_10_GeographicCoordinatePair(void)
+{
+	std::cout << "=========================" << "\n";
+	{
+		{
+			GeographicCoordinatePair gCoorPair;
+			gCoorPair.print();
+		}
+		{
+			GeographicCoordinatePair gCoorPair(1,2,3,4);
+			gCoorPair.print();
+		}
+		{
+			GeographicCoordinatePair gCoorPair;
+			gCoorPair.setFirst(1,2);
+			gCoorPair.print();
+		}
+		{
+			GeographicCoordinatePair gCoorPair;
+			GeographicCoordinate gCoorFirst(1,2);
+			gCoorPair.setFirst(gCoorFirst);
+			gCoorPair.print();
+		}
+		{
+			GeographicCoordinatePair gCoorPair;
+			GeographicCoordinate gCoorFirst(1,2);
+			GeographicCoordinate gCoorSecond(3,4);
+			gCoorPair.setFirst(gCoorFirst);
+			gCoorPair.setSecond(gCoorSecond);
+			gCoorPair.print();
+		}
+	}
+	std::cout << "=========================" << "\n";
+	return EXIT_SUCCESS;
+}
 
 int main()
 {
@@ -435,7 +471,8 @@ int main()
 	// test_5_coordinate_degree();
 	// test_6_coordinate_convertGCoorIntoCCoor();
 	// test_7_coordinate_convertCCoorIntoGCoor();
-	test_8_coordinate_calculateTStationFromGCoor();
+	// test_8_coordinate_calculateTStationFromGCoor();
 	// test_9_coordinate_calculateTStationFromCCoor();
+	test_10_GeographicCoordinatePair();
     return EXIT_SUCCESS;
 }
