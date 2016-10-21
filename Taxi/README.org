@@ -72,7 +72,7 @@ APIとして使う
 
 [20:03:34]hiro@hiro-VirtualBox:caffe$ protoc /home/hiro/local/caffe/src/caffe/proto/caffe.proto --cpp_out=/home/hiro/local/caffe/include/caffe/proto --proto_path=/home/hiro/local/caffe/src/caffe/proto
 
-としてヘッダーの作成が必要
+としてヘッダーの作成が必要である．
 
 ~/.bashrcに以下を記述する．
 
