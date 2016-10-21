@@ -415,13 +415,21 @@ int evaluateHoliday(const boost::posix_time::ptime &pTime, const int delta)
 	return ret;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // argv[0] : ./Bin/main.out
+	// argv[1] : 2 (threshold)
+	// argv[2] : 0.3 (gamma)
+	// argv[3] : -2 (displayTimeFrom)
+	// argv[4] : 4 (displayTimeTo)
+	// argv[5] : 1 (simpleVersion)
 
-	bool displayDataFactor = true;
-	bool displayDemand = true;
+	// example of input at commandline : ./Bin/main.out 2 0.3 -2 4 1
+
+	bool displayDataFactor = false;
+	bool displayDemand = false;
 	bool simpleVersion = true;	// falseにするとgammaやthresholdをうまく調整しないとサークルは出てこない．
-	bool displayTrueIndex = true;
+	bool displayTrueIndex = false;
 	// ------------- 取得するもの  ------------- //
 	// 営業領域の外枠の最北西
 	GeographicCoordinate gCoorNW;
@@ -451,14 +459,81 @@ int main()
 	double threshold;
 	// 配分の設定値
 	double gamma;
-	// 離散時間幅
-	int discreteTimeWidth;
+	// 離散時間幅(アプリの更新時間ではない．不必要になったが消すと修正しないといけないので1を入れておく)
+	int discreteTimeWidth = 1;
 	// ----------------------------------------------------- //
+	if (argc != 6) {
+		std::cout << "argc must be 6. failure!" << "\n";
+		return EXIT_FAILURE;
+	}
+
+	// commandlineから取得
+	{
+		try
+        {
+			threshold = boost::lexical_cast<double>(argv[1]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[1](threshold) must be a type of double. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		try
+        {
+			gamma = boost::lexical_cast<double>(argv[2]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[2](gamma) must be a type of double. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		if (gamma <= 0 || gamma > 1) {
+			std::cout << "argv[2](gamma) must be in (0, 1]. failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		try
+        {
+			displayTimeFrom = boost::lexical_cast<int>(argv[3]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[3](displayTimeFrom) must be a type of int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		try
+        {
+			displayTimeTo = boost::lexical_cast<int>(argv[4]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[4](displayTimeTo) must be a type of int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		int hoge = 1;
+		try
+        {
+			hoge = boost::lexical_cast<int>(argv[5]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[5](simpleVersion) must be a type of int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		if (hoge != 0 && hoge != 1) {
+			std::cout << "argv[5](simpleVersion) must be in {0, 1}. failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		if (hoge == 0) {
+			simpleVersion = false;
+		}else{
+			simpleVersion = true;
+		}
+	}
 
 	// Data/0_2_Set/InputDataFor1_Cron.xmlから読み込む
 	{
 		// 設定値読み込みファイル名
-		const std::string fileName = "InputDataFor1_Cron.xml";
+		const std::string fileName = "inputDataFor1_Cron.xml";
 		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
 		const std::string fileDire = "./../Data/0_2_Set/Other";
 		std::string fileRela = fileDire + "/" + fileName;
@@ -468,34 +543,27 @@ int main()
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
 			{
-				gCoorNW.setPhi( pt.get<double>( "table.gCoorNW.phi" ) );
-				gCoorNW.setLambda( pt.get<double>( "table.gCoorNW.lambda" ) );
+				gCoorNW.setPhi( pt.get<double>( "myData2.gCoorPair.gCoorFirst_.phi_" ) );
+				gCoorNW.setLambda( pt.get<double>( "myData2.gCoorPair.gCoorFirst_.lambda_" ) );
 			}
 			{
-				gCoorSE.setPhi( pt.get<double>( "table.gCoorSE.phi" ) );
-				gCoorSE.setLambda( pt.get<double>( "table.gCoorSE.lambda" ) );
+				gCoorSE.setPhi( pt.get<double>( "myData2.gCoorPair.gCoorSecond_.phi_" ) );
+				gCoorSE.setLambda( pt.get<double>( "myData2.gCoorPair.gCoorSecond_.lambda_" ) );
 			}
 			{
-				numCell = pt.get<int>("table.numCell.value");
-				numValidCell = pt.get<int>("table.numValidCell.value");
-				numRow = pt.get<int>("table.numRow.value");
-				numCol = pt.get<int>("table.numCol.value");
-				cellSizePhi = pt.get<double>("table.cellSizePhi.value");
-				cellSizeLambda = pt.get<double>("table.cellSizeLambda.value");
-				threshold = pt.get<double>("table.threshold.value");
-				gamma = pt.get<double>("table.gamma.value");
-			}
-			{
-				displayTimeFrom = pt.get<int>("table.displayTimeFrom.value");
-				displayTimeTo = pt.get<int>("table.displayTimeTo.value");
-				discreteTimeWidth = pt.get<int>("table.discreteTimeWidth.value");
+				numCell = pt.get<int>("myData2.numCell");
+				numValidCell = pt.get<int>("myData2.numValidCell");
+				numRow = pt.get<int>("myData2.numRow");
+				numCol = pt.get<int>("myData2.numCol");
+				cellSizePhi = pt.get<double>("myData2.cellSizePhi");
+				cellSizeLambda = pt.get<double>("myData2.cellSizeLambda");
 			}
 			{
 				// 領域の確保
 				trueIndexToIndex.resize(numValidCell);
 				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.trueIndexToIndex" ).begin();
-				itr_last = pt.get_child( "table.trueIndexToIndex" ).end();
+				itr_first = pt.get_child( "myData2.trueIndexToIndex" ).begin();
+				itr_last = pt.get_child( "myData2.trueIndexToIndex" ).end();
 				for(it = itr_first; it != itr_last; ++it) {
 					std::size_t i = std::distance(itr_first, it);
 					trueIndexToIndex[i] = it->second.get<int>("index");
@@ -761,7 +829,7 @@ int main()
 		if (N == 0) {
 			// 空のサークル情報をを作成
 			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyCirclePosition.xml");
+				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyCircle.xml");
 				boost::filesystem::path dst("./../Data/1_Cron/Other/circlePoints.xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			} catch (std::exception& e) {

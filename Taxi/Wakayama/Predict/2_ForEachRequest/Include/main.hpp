@@ -36,6 +36,8 @@
 // プログレス表示に必要
 #include <boost/thread/thread.hpp> 
 
+// #include <algorithm>
+
 namespace hiro {
 
 } // namespace hiro

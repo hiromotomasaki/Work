@@ -3,20 +3,7 @@
 初期設定
 ** 0_2_Set
 0_1_Presetの内容を基に事前計算できるものを作成する．
-** 0_3_Learn
-ニューラルネットワークの学習
 ** 1_Cron
 離散時間間隔で実行するコード
-
-
-* 今後
-追加学習できるようにする．
-
-学習データベースから読み込んで学習するようにする．
-
-Training and Resuming
-
-https://groups.google.com/forum/#!searchin/caffe-users/approximation|sort:date/caffe-users/AVwB0qcFTbE/qHpUZ4dzCgAJ
-
-* caffeの導入
-
+** 2_ForEachRequest
+タクシーからの要求ごとに実行するコード

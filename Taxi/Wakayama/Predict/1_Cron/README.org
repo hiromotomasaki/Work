@@ -19,11 +19,11 @@ channels = 1450
 
 target layerの
 
-channels = 1957 (= 有効セル数 + 1)
+channels = 1907 (= 有効セル数 + 1)
 
 relu1 layerの
 
-inner_product_paramのnum_output = 1957 (= 有効セル数 + 1)
+inner_product_paramのnum_output = 1907 (= 有効セル数 + 1)
 
 
 ** フォルダの作成
@@ -50,6 +50,6 @@ inner_product_paramのnum_output = 1957 (= 有効セル数 + 1)
 /home/hiro/Documents/Work/Taxi/Wakayama/Predict/1_Cron
 [12:41:20]hiro@hiro-VirtualBox:1_Cron$ make -j4
 make: 'Bin/main.out' は更新済みです.
-[12:41:25]hiro@hiro-VirtualBox:1_Cron$ ./Bin/main.out
+[12:41:25]hiro@hiro-VirtualBox:1_Cron$ ./Bin/main.out 2 0.3 -2 4 1
 #+END_SRC
 

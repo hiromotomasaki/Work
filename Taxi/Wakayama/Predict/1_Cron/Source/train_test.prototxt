@@ -57,7 +57,7 @@ layer {
       top: "dummyLadell2"
       memory_data_param {
                         batch_size: 100 # 一回のプロセスで入れる訓練データの数
-                        channels: 1957 # color channelの数のこと。ここをn,height, widthを1にすればn次元のベクトルデータが扱える。
+                        channels: 1907 # color channelの数のこと。ここをn,height, widthを1にすればn次元のベクトルデータが扱える。
                         height: 1
                         width: 1
                         }
@@ -108,7 +108,7 @@ layer {
             lr_mult: 2
       }
       inner_product_param {
-                          num_output: 1957
+                          num_output: 1907
                           # 重さの初期値の決め方
                           weight_filler {
                                         type: "xavier"

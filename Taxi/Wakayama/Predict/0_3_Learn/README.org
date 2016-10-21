@@ -16,11 +16,11 @@ channels = 1450
 
 target layerの
 
-channels = 1957 (= 有効セル数 + 1)
+channels = 1907 (= 有効セル数 + 1)
 
 relu1 layerの
 
-inner_product_paramのnum_output = 1957 (= 有効セル数 + 1)
+inner_product_paramのnum_output = 1907 (= 有効セル数 + 1)
 ** フォルダの作成
 ./../Data/0_3_Learn/FromServerのフォルダの作成をする．
 

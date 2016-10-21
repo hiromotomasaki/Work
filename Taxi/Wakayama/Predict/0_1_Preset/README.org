@@ -23,9 +23,9 @@
 #+END_SRC
 
 ** Source/main.cpp内で
-関数myCreateDataまたは関数myCreateTestDataの内容確認
+関数mySetParameterの内容確認
 
-関数main内部のisTestの値の設定
+関数main内部のisTestとdisplayDataの値の設定
 
 * 実行手順
 #+BEGIN_SRC sh

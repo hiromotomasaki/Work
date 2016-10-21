@@ -469,7 +469,7 @@ int main()
 	// Data/0_2_Set/InputDataFor0_3_Learn.xmlから読み込む
 	{
 		// 設定値読み込みファイル名
-		const std::string fileName = "InputDataFor0_3_Learn.xml";
+		const std::string fileName = "inputDataFor0_3_Learn.xml";
 		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
 		const std::string fileDire = "./../Data/0_2_Set/Other";
 		std::string fileRela = fileDire + "/" + fileName;
@@ -479,36 +479,36 @@ int main()
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
 			{
-				gCoorNW.setPhi( pt.get<double>( "table.gCoorNW.phi" ) );
-				gCoorNW.setLambda( pt.get<double>( "table.gCoorNW.lambda" ) );
+				gCoorNW.setPhi( pt.get<double>( "myData2.gCoorPair.gCoorFirst_.phi_" ) );
+				gCoorNW.setLambda( pt.get<double>( "myData2.gCoorPair.gCoorFirst_.lambda_" ) );
 			}
 			{
-				gCoorSE.setPhi( pt.get<double>( "table.gCoorSE.phi" ) );
-				gCoorSE.setLambda( pt.get<double>( "table.gCoorSE.lambda" ) );
+				gCoorSE.setPhi( pt.get<double>( "myData2.gCoorPair.gCoorSecond_.phi_" ) );
+				gCoorSE.setLambda( pt.get<double>( "myData2.gCoorPair.gCoorSecond_.lambda_" ) );
 			}
 			{
-				numCell = pt.get<int>("table.numCell.value");
-				numValidCell = pt.get<int>("table.numValidCell.value");
-				numRow = pt.get<int>("table.numRow.value");
-				numCol = pt.get<int>("table.numCol.value");
-				cellSizePhi = pt.get<double>("table.cellSizePhi.value");
-				cellSizeLambda = pt.get<double>("table.cellSizeLambda.value");
+				numCell = pt.get<int>("myData2.numCell");
+				numValidCell = pt.get<int>("myData2.numValidCell");
+				numRow = pt.get<int>("myData2.numRow");
+				numCol = pt.get<int>("myData2.numCol");
+				cellSizePhi = pt.get<double>("myData2.cellSizePhi");
+				cellSizeLambda = pt.get<double>("myData2.cellSizeLambda");
 			}
 			{
 				// 数を調べる
 				int N = 0;
 				{
 					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.indexToTrueIndex" ).begin();
-					itr_last = pt.get_child( "table.indexToTrueIndex" ).end();
+					itr_first = pt.get_child( "myData2.indexToTrueIndex" ).begin();
+					itr_last = pt.get_child( "myData2.indexToTrueIndex" ).end();
 					N = std::distance(itr_first, itr_last);
 				}
 				// 要素の追加
 				indexToTrueIndex.reserve(N);
 				{
 					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.indexToTrueIndex" ).begin();
-					itr_last = pt.get_child( "table.indexToTrueIndex" ).end();
+					itr_first = pt.get_child( "myData2.indexToTrueIndex" ).begin();
+					itr_last = pt.get_child( "myData2.indexToTrueIndex" ).end();
 					for(it = itr_first; it != itr_last; ++it) {
 						indexToTrueIndex.push_back(it->second.get<int>("value"));
 					}
