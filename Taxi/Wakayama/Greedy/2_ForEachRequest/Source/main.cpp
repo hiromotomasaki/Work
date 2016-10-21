@@ -30,7 +30,7 @@ struct MyData
 struct MyData2
 {
 	std::vector<int> vIndex;
-	int N;
+	std::vector<int> vDemand;
 };
 
 MyData myReadMyData( const std::string &fileName, const std::string &fileDire );
@@ -91,18 +91,25 @@ MyData2 myReadMyData2( const std::string &fileName, const std::string &fileDire 
 		// read the xml file
 		boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
 		{
-			ret.N = pt.get<double>( "table.size" );
 			{
-				int N = ret.N;
+				int N = 0;
+				{
+					boost::property_tree::ptree::iterator itr_first, itr_last, it;
+					itr_first = pt.get_child( "table.vIndex" ).begin();
+					itr_last = pt.get_child( "table.vIndex" ).end();
+					N = std::distance(itr_first, itr_last);
+				}
 				// 要素の追加する領域を確保
 				ret.vIndex.reserve(N);
+				ret.vDemand.reserve(N);
 				// 値の追加
 				{
 					boost::property_tree::ptree::iterator itr_first, itr_last, it;
 					itr_first = pt.get_child( "table.vIndex" ).begin();
 					itr_last = pt.get_child( "table.vIndex" ).end();
 					for(it = itr_first; it != itr_last; ++it) {
-						ret.vIndex.push_back( it->second.get<int>("") );
+						ret.vIndex.push_back( it->second.get<int>("value") );
+						ret.vDemand.push_back( it->second.get<int>("demand") );
 					}
 				}
 			}
@@ -134,7 +141,8 @@ void myDisplayVIndexUnderThreshold(std::vector<int> &vIndexUnderThreshold)
 }
 
 int myCalculateDir(double theta);
-int myCalculateDir(double theta) {
+int myCalculateDir(double theta)
+{
 	int dir = 2;
 	{
 		if((theta >= 0) && (theta < 22.5)) {
@@ -216,21 +224,47 @@ std::vector<int> myReadVIndexSearch(std::string &fileName, std::string &fileDire
 	return ret;
 }
 
-int mySearchIndexTarget(std::vector<int> &v1, std::vector<int> &v2);
-int mySearchIndexTarget(std::vector<int> &v1, std::vector<int> &v2)
+void mySearchIndexTarget(std::vector<int> &v1, std::vector<int> &v2, std::vector<int> &v3, int &indexTarget, int &valueTarget);
+void mySearchIndexTarget(std::vector<int> &v1, std::vector<int> &v2, std::vector<int> &v3, int &indexTarget, int &valueTarget)
 {
-	// viの中で，v2に含まれる要素の中でv1の先頭により近い値を返す．
+	// v2に含まれる要素の中でv1の先頭により近い値をindexTargetに格納する．
 	// v1が探索範囲．v2が需要数のあるセル．
-	// もし，v2の中にv1の要素がひとつもなければ0を返す．
-	int ret = 0;
+	// もし，v2の中にv1の要素がひとつもなければ0をindexTargetに格納する．
 	{
 		std::vector<int>::iterator it;
 		it = find_first_of(v1.begin(), v1.end(), v2.begin(), v2.end());
 		if (it != v1.end()) {
-			ret = *it;
+			indexTarget = *it;
+			std::vector<int> vHoge(1, indexTarget);
+			std::vector<int>::iterator itHoge;
+			itHoge = find_first_of(v2.begin(), v2.end(), vHoge.begin(), vHoge.end());
+			std::size_t i = std::distance(v2.begin(), itHoge);
+			valueTarget = v3[i];
+		}else{
+			indexTarget = 0;
+			valueTarget = -1;
 		}
 	}
-	return ret;
+}
+
+void myCreateValue(const std::string &fileName, const std::string &fileDire, const int value);
+void myCreateValue(const std::string &fileName, const std::string &fileDire, const int value)
+{
+	// 保存path
+	std::string fileRela = fileDire + "/" + fileName;
+	// create an empty property tree
+	boost::property_tree::ptree pt;
+
+	// create the root element
+	boost::property_tree::ptree& root = pt.put("table", "");
+
+	// add child elements
+	{
+		root.put("value", value);
+	}
+
+	// output
+	boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 }
 
 int main(int argc, char *argv[])
@@ -357,6 +391,14 @@ int main(int argc, char *argv[])
 			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+		} catch (std::exception& e) {
+			std::cout << "failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		try {
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyValue.xml");
+			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + "_value.xml");
+			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			return EXIT_SUCCESS;
 		} catch (std::exception& e) {
 			std::cout << "failure!" << "\n";
@@ -394,6 +436,14 @@ int main(int argc, char *argv[])
 			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+		} catch (std::exception& e) {
+			std::cout << "failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		try {
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyValue.xml");
+			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + "_value.xml");
+			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			return EXIT_SUCCESS;
 		} catch (std::exception& e) {
 			std::cout << "failure!" << "\n";
@@ -419,7 +469,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// // 表示
+	// 表示
 	// myDisplayVIndexNotLessThanThreshold(myData2NotLessThanThreshold.vIndex);
 
     // // 表示
@@ -432,11 +482,17 @@ int main(int argc, char *argv[])
 	// Targetとなりうるセルが存在するか
 	bool checkDemand = false;
 	{
-		if (myData2NotLessThanThreshold.N != 1) {
-			checkNLTT = true;
+		{
+			int N = myData2NotLessThanThreshold.vIndex.size();
+			if (N != 1) {
+				checkNLTT = true;
+			}
 		}
-		if (myData2UnderThreshold.N != 1) {
-			checkUT = true;
+		{
+			int N = myData2UnderThreshold.vIndex.size();
+			if (N != 1) {
+				checkUT = true;
+			}
 		}
 		checkDemand = checkNLTT || checkUT;
 	}
@@ -445,6 +501,14 @@ int main(int argc, char *argv[])
 		try {
 			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
+			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+		} catch (std::exception& e) {
+			std::cout << "failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		try {
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyValue.xml");
+			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + "_value.xml");
 			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			return EXIT_SUCCESS;
 		} catch (std::exception& e) {
@@ -474,6 +538,7 @@ int main(int argc, char *argv[])
 
 	// indexTaxiに対するindexTargetを求める
 	int indexTarget = 0;
+	int valueTarget = -1;
 	bool gotIndexTarget = false;
 	{
 		// 探索範囲を取得
@@ -503,6 +568,14 @@ int main(int argc, char *argv[])
 		// }
 
 		// {
+		// 	int N = myData2NotLessThanThreshold.vIndex.size();
+		// 	for (int i = 0; i < N; i++) {
+		// 		std::cout << "[" << myData2NotLessThanThreshold.vDemand[i] << "]";
+		// 	}
+		// 	std::cout << "\n";
+		// }
+
+		// {
 		// 	int N = myData2UnderThreshold.vIndex.size();
 		// 	for (int i = 0; i < N; i++) {
 		// 		std::cout << "[" << myData2UnderThreshold.vIndex[i] << "]";
@@ -510,9 +583,17 @@ int main(int argc, char *argv[])
 		// 	std::cout << "\n";
 		// }
 
-		indexTarget = mySearchIndexTarget(vIndexSearch, myData2NotLessThanThreshold.vIndex);
+		// {
+		// 	int N = myData2UnderThreshold.vIndex.size();
+		// 	for (int i = 0; i < N; i++) {
+		// 		std::cout << "[" << myData2UnderThreshold.vDemand[i] << "]";
+		// 	}
+		// 	std::cout << "\n";
+		// }
+
+		mySearchIndexTarget(vIndexSearch, myData2NotLessThanThreshold.vIndex, myData2NotLessThanThreshold.vDemand, indexTarget, valueTarget);
 		if (indexTarget == 0) {
-			indexTarget = mySearchIndexTarget(vIndexSearch, myData2UnderThreshold.vIndex);
+			mySearchIndexTarget(vIndexSearch, myData2UnderThreshold.vIndex, myData2UnderThreshold.vDemand, indexTarget, valueTarget);
 			if (indexTarget != 0) {
 				gotIndexTarget = true;
 			}
@@ -525,6 +606,14 @@ int main(int argc, char *argv[])
 		try {
 			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyObject.xml");
 			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
+			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+		} catch (std::exception& e) {
+			std::cout << "failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		try {
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyValue.xml");
+			boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + "_value.xml");
 			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
 			return EXIT_SUCCESS;
 		} catch (std::exception& e) {
@@ -542,6 +631,9 @@ int main(int argc, char *argv[])
 	// // 表示
 	// std::cout << "indexTarget : " << indexTarget << "\n";
 
+	// // 表示
+	// std::cout << "valueTarget : " << valueTarget << "\n";
+
 	// 保存
 	{
 		if(indexTaxi != indexTarget) {
@@ -550,7 +642,6 @@ int main(int argc, char *argv[])
 				boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutCell/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + ".xml" );
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-				return EXIT_SUCCESS;
 			} catch (std::exception& e) {
 				std::cout << "failure!" << "\n";
 				return EXIT_FAILURE;
@@ -561,11 +652,19 @@ int main(int argc, char *argv[])
 				boost::filesystem::path src("./../Data/0_2_Set/Other/InfoAboutCell/" + boost::lexical_cast<std::string>( indexTaxi ) + "/Object/" + boost::lexical_cast<std::string>( indexTarget ) + "/dir" + boost::lexical_cast<std::string>( dir ) + ".xml" );
 				boost::filesystem::path dst("./../Data/2_ForEachRequest/Other/id_" + idTaxiStr + ".xml");
 				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-				return EXIT_SUCCESS;
 			} catch (std::exception& e) {
 				std::cout << "failure!" << "\n";
 				return EXIT_FAILURE;
 			}
+		}
+
+		// valueTargetの保存
+		{
+			// 保存ファイル名
+			const std::string fileName = "id_" + idTaxiStr + "_value.xml";
+			// ディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/2_ForEachRequest/Other";
+			myCreateValue(fileName, fileDire, valueTarget);
 		}
 	}
     return EXIT_SUCCESS;

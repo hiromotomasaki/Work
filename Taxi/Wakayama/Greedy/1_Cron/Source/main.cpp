@@ -32,7 +32,7 @@ struct MyData
 struct MyData2
 {
 	std::vector<int> vIndex;
-	int N;
+	std::vector<int> vDemand;
 };
 
 MyData myReadMyData( const std::string &fileName, const std::string &fileDire );
@@ -149,12 +149,9 @@ void mySaveMyData2( MyData2 &myData2, const std::string &fileName, const std::st
 			boost::property_tree::ptree& child = root.put("vIndex", "");
 			for (int i = 0; i < N; i++) {
 				boost::property_tree::ptree& cchild = child.add("element", "");
-				cchild.put("", myData2.vIndex[i]);
+				cchild.put("value", myData2.vIndex[i]);
+				cchild.put("demand", myData2.vDemand[i]);
 			}
-		}
-		{
-			boost::property_tree::ptree& child = root.put("size", "");
-			child.put("", myData2.N);
 		}
 	}
 
@@ -256,19 +253,23 @@ int main(int argc, char *argv[])
 	MyData2 myData2NotLessThanThreshold;
     myData2NotLessThanThreshold.vIndex.reserve(myData.numCell+1);
     myData2NotLessThanThreshold.vIndex.push_back(-1);
+    myData2NotLessThanThreshold.vDemand.reserve(myData.numCell+1);
+    myData2NotLessThanThreshold.vDemand.push_back(-1);
 	MyData2 myData2UnderThreshold;
 	myData2UnderThreshold.vIndex.reserve(myData.numCell+1);
     myData2UnderThreshold.vIndex.push_back(-1);
+	myData2UnderThreshold.vDemand.reserve(myData.numCell+1);
+    myData2UnderThreshold.vDemand.push_back(-1);
 	{
 		for (int i = 0; i < myData.numCell; i++) {
 			if (vDemand[i] >= (int)threshold) {
 				myData2NotLessThanThreshold.vIndex.push_back(i + 1);
+				myData2NotLessThanThreshold.vDemand.push_back(vDemand[i]);
 			}else if((vDemand[i] < (int)threshold) && (vDemand[i] > 0)) {
 				myData2UnderThreshold.vIndex.push_back(i + 1);
+				myData2UnderThreshold.vDemand.push_back(vDemand[i]);
 			}
 		}
-		myData2NotLessThanThreshold.N = myData2NotLessThanThreshold.vIndex.size();
-		myData2UnderThreshold.N = myData2UnderThreshold.vIndex.size();
 	}
 
 	// // 表示

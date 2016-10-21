@@ -9,17 +9,37 @@
 using namespace hiro;
 
 // 【この関数の目的】
-// Cronごとにある抽出条件にしたがって得られたData.xmlから，有効な各セルに対してサークル内の需要数を求める．有効なセルの中で，しきい値以上の需要数を持つセルの代表点を間引いて保存する．描画を行うサークルの需要数から対応するサークルの空車数を引いた仮需要数を計算する．仮しきい値以上の仮需要数を持つセルのindex番号を取得，1以上仮しきい値未満の仮需要数を持つセルのindex番号を取得，保存する．
+// Cronごとに実行するGreedyのプログラム
 
-// 以下のファイルが作成される
-// *** circleFlag.xml
-// サークルが描画されたときに被覆されるセルの判別情報
-// *** indexUnderThresholdKari.xml
-// 需要数がしきい値未満0より大きいindexを有する
-// *** indexNotLessThanThresholdKari.xml
-// 需要数がしきい値以上indexを有する
-// *** circlePoints.xml
-// サークルが描画される位置情報
+struct MyData
+{
+	// 営業領域の外枠
+	GeographicCoordinatePair gCoorPair;
+	// 営業領域の外枠の行数
+	int numRow;
+	// 営業領域の外枠の列数
+	int numCol;
+	// 営業領域の外枠内にあるセル数
+	int numCell;
+	// セルの南北の緯度差
+	double cellSizePhi;
+	// セルの東西の経度差
+	double cellSizeLambda;
+	// セルが有効かどうか判別するフラグ
+	std::vector<bool> vIsValid;
+	// 需要数カウントのための情報
+	std::vector<std::vector<int>> vDemandCountCircleIndex;
+	// 空車数カウントのための情報
+	std::vector<std::vector<int>> vVacantCountCircleIndex;
+	// 円が重ならないようにするための情報
+	std::vector<std::vector<int>> vFlagSetCircleIndex;
+};
+
+struct MyData2
+{
+	std::vector<int> vIndex;
+	std::vector<int> vDemand;
+};
 
 struct PairIndexDemand {
     int index;
@@ -36,242 +56,464 @@ public:
     }
 };
 
-
-// 時間を丸める関数
-boost::posix_time::ptime roundPTime(const boost::posix_time::ptime &pTime, const int delta);
-boost::posix_time::ptime roundPTime(const boost::posix_time::ptime &pTime, const int delta) {
-	boost::posix_time::ptime ret(boost::gregorian::date(pTime.date().year(),pTime.date().month().as_number(),pTime.date().day()), boost::posix_time::time_duration(pTime.time_of_day().hours(),0,0));
-	// f(秒) = 60(秒/分)*x(分)+y(秒)
-	// 1cycle = z(秒) = 60(秒/分)*Δt(分)
-	// f ≡ γ(mod z)
-	// if γ >= z/2 then 繰り上げ
-	// if γ <  z/2 then 切り捨て
-	// y(秒)=0として
-	// あとはx(分)だけ見れば良い
-	// 繰り上げると x+Δt-x%Δt
-	// 切り捨てると x    -x%Δt
-	// (=X(分))になる.
-	// この値を保持しておき, まずx=0としてその後pTime+Xをすればよい
-	int z = 60 * delta;           // 時間幅
-	int z_2 = 30 * delta;           // 時間幅の半分
-	int x = pTime.time_of_day().minutes(); // 分
-	int y = pTime.time_of_day().seconds(); // 秒
-	int f = 60 * x + y;
-	int gamma = f % z;
-	int X = 0;                    // 丸め後の分
-	if( gamma >= z_2) {
-		X = x + delta - x % delta;
-	}else{
-		X = x - x % delta;
+MyData myReadMyData( const std::string &fileName, const std::string &fileDire );
+MyData myReadMyData( const std::string &fileName, const std::string &fileDire )
+{
+	MyData ret;
+	{
+		std::string fileRela = fileDire + "/" + fileName;
+		// create an empty property tree
+		boost::property_tree::ptree pt;
+		// read the xml file
+		boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
+		{
+			ret.gCoorPair.set( pt.get<double>( "myData.gCoorPair.gCoorFirst_.phi_" ), pt.get<double>( "myData.gCoorPair.gCoorFirst_.lambda_" ), pt.get<double>( "myData.gCoorPair.gCoorSecond_.phi_" ), pt.get<double>( "myData.gCoorPair.gCoorSecond_.lambda_" ) );
+			ret.numRow = pt.get<int>( "myData.numRow" );
+			ret.numCol = pt.get<int>( "myData.numCol" );
+			ret.numCell = pt.get<int>( "myData.numCell" );
+			ret.cellSizePhi = pt.get<double>( "myData.cellSizePhi" );
+			ret.cellSizeLambda = pt.get<double>( "myData.cellSizeLambda" );
+			{
+				int N = ret.numCell;
+				// 要素の追加する領域を確保
+				ret.vIsValid.reserve(N);
+				// 値の追加
+				{
+					boost::property_tree::ptree::iterator itr_first, itr_last, it;
+					itr_first = pt.get_child( "myData.vIsValid" ).begin();
+					itr_last = pt.get_child( "myData.vIsValid" ).end();
+					for(it = itr_first; it != itr_last; ++it) {
+						ret.vIsValid.push_back( it->second.get<bool>("") );
+					}
+				}
+			}
+			{
+				int N = ret.numCell;
+				// 要素の追加する領域を確保
+				ret.vDemandCountCircleIndex.reserve(N);
+				// 値の追加
+				{
+					boost::property_tree::ptree::iterator itr_first, itr_last, it;
+					itr_first = pt.get_child( "myData.vDemandCountCircleIndex" ).begin();
+					itr_last = pt.get_child( "myData.vDemandCountCircleIndex" ).end();
+					for(it = itr_first; it != itr_last; ++it) {
+						std::vector<int> vHoge;
+						{
+							boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
+							itr_first_c = it->second.get_child( "" ).begin();
+							itr_last_c = it->second.get_child( "" ).end();
+							std::size_t NHoge = std::distance(itr_first_c, itr_last_c);
+							vHoge.reserve(NHoge);
+							for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
+								vHoge.push_back(it_c->second.get<int>("j"));
+							}
+						}
+						ret.vDemandCountCircleIndex.push_back(vHoge);
+					}
+				}
+			}
+			{
+				int N = ret.numCell;
+				// 要素の追加する領域を確保
+				ret.vVacantCountCircleIndex.reserve(N);
+				// 値の追加
+				{
+					boost::property_tree::ptree::iterator itr_first, itr_last, it;
+					itr_first = pt.get_child( "myData.vVacantCountCircleIndex" ).begin();
+					itr_last = pt.get_child( "myData.vVacantCountCircleIndex" ).end();
+					for(it = itr_first; it != itr_last; ++it) {
+						std::vector<int> vHoge;
+						{
+							boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
+							itr_first_c = it->second.get_child( "" ).begin();
+							itr_last_c = it->second.get_child( "" ).end();
+							std::size_t NHoge = std::distance(itr_first_c, itr_last_c);
+							vHoge.reserve(NHoge);
+							for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
+								vHoge.push_back(it_c->second.get<int>("j"));
+							}
+						}
+						ret.vVacantCountCircleIndex.push_back(vHoge);
+					}
+				}
+			}
+			{
+				int N = ret.numCell;
+				// 要素の追加する領域を確保
+				ret.vFlagSetCircleIndex.reserve(N);
+				// 値の追加
+				{
+					boost::property_tree::ptree::iterator itr_first, itr_last, it;
+					itr_first = pt.get_child( "myData.vFlagSetCircleIndex" ).begin();
+					itr_last = pt.get_child( "myData.vFlagSetCircleIndex" ).end();
+					for(it = itr_first; it != itr_last; ++it) {
+						std::vector<int> vHoge;
+						{
+							boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
+							itr_first_c = it->second.get_child( "" ).begin();
+							itr_last_c = it->second.get_child( "" ).end();
+							std::size_t NHoge = std::distance(itr_first_c, itr_last_c);
+							vHoge.reserve(NHoge);
+							for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
+								vHoge.push_back(it_c->second.get<int>("j"));
+							}
+						}
+						ret.vFlagSetCircleIndex.push_back(vHoge);
+					}
+				}
+			}
+		}
 	}
-	ret = ret + boost::posix_time::minutes(X);
 	return ret;
 }
 
-int main()
+void myDisplayMyData(MyData &myData);
+void myDisplayMyData(MyData &myData)
 {
-	// ------------- 取得するもの  ------------- //
-	// 営業領域の外枠の最北西
-	GeographicCoordinate gCoorNW;
-	// 営業領域の外枠の最南東
-	GeographicCoordinate gCoorSE;
-	// 営業領域の外枠内にあるセル数
-	int numCell;
-	// 営業領域の外枠の行数
-	int numRow;
-	// 営業領域の外枠の列数
-	int numCol;
-	// セルの南北の緯度差
-	double cellSizePhi;
-	// セルの東西の経度差
-	double cellSizeLambda;
-
-    // 需要が集中していると判定するためのしきい値．このしきい値以上であれば需要が集中しているとみなす．
-	double threshold;
-	// サークルの仮需要のしきい値
-	double thresholdKari;
-
-    // 表示するピンの日にちに関する抽出条件
-	std::vector<int> displayDate;
-	// 表示するピンの時間幅の始点は現在時刻から何分前なのか
-	int displayTimeFrom;
-	// 表示するピンの時間幅の始点は現在時刻から何分後なのか
-	int displayTimeTo;
-	// 離散時間幅
-	int discreteTimeWidth;
-	// セルが有効かどうか
-	std::vector<bool> vValid;
-	// 需要数をカウントするサークル情報
-	std::vector<std::vector<int>> demandCircleRange;
-	// 空車数をカウントするサークル情報
-	std::vector<std::vector<int>> vacantCircleRange;
-	// サークルの重なりを防ぐフラグを立てるためのサークル情報
-	std::vector<std::vector<int>> demandCircleOccupancyRange;
-	// ----------------------------------------------------- //
-
-	// Data/0_2_Set/InputDataFor1_Cron.xmlから読み込む
 	{
-		// 設定値読み込みファイル名
-		const std::string fileName = "InputDataFor1_Cron.xml";
-		// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-		const std::string fileDire = "./../Data/0_2_Set/Other";
-		std::string fileRela = fileDire + "/" + fileName;
-		{
+		std::cout << "myData.vIsValid" << "\n";
+		int N = myData.numCell;
+		for (int i = 0; i < N; i++) {
+			std::cout << "[" << myData.vIsValid[i] << "]";
+		}
+		std::cout << "\n";
+	}
+	std::cout << "myData.gCoorPair : ";
+	std::cout << "[";
+	myData.gCoorPair.printStr();
+	std::cout << "]" << "\n";
+	std::cout << "myData.numRow : " << "[" << myData.numRow << "]" << "\n";
+	std::cout << "myData.numCol : " << "[" << myData.numCol << "]" << "\n";
+	std::cout << "myData.numCell : " << "[" << myData.numCell << "]" << "\n";
+	std::cout << "myData.cellSizePhi : " << "[" << myData.cellSizePhi << "]" << "\n";
+	std::cout << "myData.cellSizeLambda : " << "[" << myData.cellSizeLambda << "]" << "\n";
+}
+
+void myDisplayCircleIndex(std::vector<std::vector<int>> &V);
+void myDisplayCircleIndex(std::vector<std::vector<int>> &V)
+{
+	for (int i = 0; i < (int)V.size(); i++) {
+		int N = V[i].size();
+		if (N >= 2) {
+			std::cout << "[" << i+1 << ", num = " << N-1 << "] : ";
+			for (int j = 0; j < N; j++) {
+				std::cout << V[i][j] << ", " ;
+			}
+			std::cout << "\n";
+		}
+	}
+}
+
+void myDisplayVDemand(std::vector<int> &vDemand);
+void myDisplayVDemand(std::vector<int> &vDemand)
+{
+	int sumDemand = std::accumulate(vDemand.begin(), vDemand.end(), 0);
+	std::cout << "総需要数 : " << sumDemand << "\n";
+	if (sumDemand > 0) {
+		std::cout << "需要数の確認" << "\n";
+		int N = vDemand.size();
+		for (int i = 0; i < N; i++) {
+			if (vDemand[i] >= 1) {
+				std::cout << "[index]" << i+1 << ", [demand]" << vDemand[i] << "\n";
+			}
+		}
+	}
+}
+
+void myDisplayVVacantTaxi(std::vector<int> &vVacantTaxi);
+void myDisplayVVacantTaxi(std::vector<int> &vVacantTaxi)
+{
+	int sumVacantTaxi = std::accumulate(vVacantTaxi.begin(), vVacantTaxi.end(), 0);
+	std::cout << "総空車数 : " << sumVacantTaxi << "\n";
+	if (sumVacantTaxi > 0) {
+		std::cout << "空車数の確認" << "\n";
+		int N = vVacantTaxi.size();
+		for (int i = 0; i < N; i++) {
+			if (vVacantTaxi[i] >= 1) {
+				std::cout << "[index]" << i+1 << ", [numVacant]" << vVacantTaxi[i] << "\n";
+			}
+		}
+	}
+}
+
+void myDisplayVDemandCircle(std::vector<int> &vDemandCircle);
+void myDisplayVDemandCircle(std::vector<int> &vDemandCircle)
+{
+	std::cout << "サークルでカウントした需要数の確認" << "\n";
+	int N = vDemandCircle.size();
+	for (int i = 0; i < N; i++) {
+		if (vDemandCircle[i] >= 1) {
+			std::cout << "[index]" << i+1 << ", [numDemand]" << vDemandCircle[i] << "\n";
+		}
+	}
+}
+
+void myDisplayVVacantTaxiCircle(std::vector<int> &vVacantTaxiCircle);
+void myDisplayVVacantTaxiCircle(std::vector<int> &vVacantTaxiCircle)
+{
+	std::cout << "サークルでカウントした空車数の確認" << "\n";
+	int N = vVacantTaxiCircle.size();
+	for (int i = 0; i < N; i++) {
+		if (vVacantTaxiCircle[i] >= 1) {
+			std::cout << "[index]" << i+1 << ", [numVacant]" << vVacantTaxiCircle[i] << "\n";
+		}
+	}
+}
+
+void myUpdateVFlags(std::vector<bool> &vFlag, std::vector<int> &vIndex);
+void myUpdateVFlags(std::vector<bool> &vFlag, std::vector<int> &vIndex)
+{
+	int N = vIndex.size();
+	for (int i = 1; i < N; i++) {
+		int indexMark = vIndex[i];
+		vFlag[indexMark - 1] = true;
+	}
+}
+
+void myDisplayCirclePairIndexDemand(std::vector<PairIndexDemand> &v, std::vector<bool> &vFlag);
+void myDisplayCirclePairIndexDemand(std::vector<PairIndexDemand> &v, std::vector<bool> &vFlag)
+{
+	int N = vFlag.size();
+	for (int i = 0; i < N; i++) {
+		if (vFlag[i]) {
+			std::cout << "index : " << "[" << v[i].index << "], " << "demand : " << v[i].demand << "\n";
+		}
+	}
+}
+
+void mySaveVDemandCircleFlag( std::vector<bool> &v, std::vector<bool> &vIsValid );
+void mySaveVDemandCircleFlag( std::vector<bool> &v, std::vector<bool> &vIsValid )
+{
+	int N = v.size();
+	for (int i = 0; i < N; i++) {
+		if (vIsValid[i]) {
+			// 保存ファイル名
+			const std::string fileName = boost::lexical_cast<std::string>( i + 1 ) + ".xml";
+			// 保存ファイル先のディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/1_Cron/Other";
+			// 保存path
+			std::string fileRela = fileDire + "/" + fileName;
 			// create an empty property tree
 			boost::property_tree::ptree pt;
-			// read the xml file
-			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
+
+			// create the root element
+			boost::property_tree::ptree& root = pt.put("table", "");
+
+			// add child elements
 			{
-				gCoorNW.setPhi( pt.get<double>( "table.gCoorNW.phi" ) );
-				gCoorNW.setLambda( pt.get<double>( "table.gCoorNW.lambda" ) );
-			}
-			{
-				gCoorSE.setPhi( pt.get<double>( "table.gCoorSE.phi" ) );
-				gCoorSE.setLambda( pt.get<double>( "table.gCoorSE.lambda" ) );
-			}
-			{
-				numCell = pt.get<int>("table.numCell.value");
-				numRow = pt.get<int>("table.numRow.value");
-				numCol = pt.get<int>("table.numCol.value");
-				cellSizePhi = pt.get<double>("table.cellSizePhi.value");
-				cellSizeLambda = pt.get<double>("table.cellSizeLambda.value");
-				threshold = pt.get<double>("table.threshold.value");
-				thresholdKari = pt.get<double>("table.thresholdKari.value");
-			}
-			{
-				// 数を調べる
-				int N = 0;
 				{
-					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.displayDate" ).begin();
-					itr_last = pt.get_child( "table.displayDate" ).end();
-					N = std::distance(itr_first, itr_last);
-				}
-				// 要素の追加
-				displayDate.reserve(N);
-				{
-					boost::property_tree::ptree::iterator itr_first, itr_last, it;
-					itr_first = pt.get_child( "table.displayDate" ).begin();
-					itr_last = pt.get_child( "table.displayDate" ).end();
-					for(it = itr_first; it != itr_last; ++it) {
-						displayDate.push_back(it->second.get<int>("value"));
-					}
+					root.put("vDemandCircleFlag", v[i]);
 				}
 			}
-			{
-				displayTimeFrom = pt.get<int>("table.displayTimeFrom.value");
-				displayTimeTo = pt.get<int>("table.displayTimeTo.value");
-				discreteTimeWidth = pt.get<int>("table.discreteTimeWidth.value");
+
+			// output
+			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
+		}
+	}
+}
+
+void mySaveDisplayCircleInfo(std::vector<PairIndexDemand> &v, std::vector<bool> &vFlag, MyData &myData, int numCircleDisplay);
+void mySaveDisplayCircleInfo(std::vector<PairIndexDemand> &v, std::vector<bool> &vFlag, MyData &myData, int numCircleDisplay)
+{
+	if (numCircleDisplay != 0) {
+		std::vector<GeographicCoordinate> vRepresentativePoint(numCircleDisplay);
+		int N = vFlag.size();
+		int j = 0;
+		for (int i = 0; i < N; i++) {
+			if (vFlag[i]) {
+				int indexCircle = v[i].index;
+				int row = calculateRowFromIndex( indexCircle, myData.numCol, myData.numCell );
+				int col = calculateColFromIndex( indexCircle, myData.numCol, myData.numCell );
+				vRepresentativePoint[j].setPhi( myData.gCoorPair.getFirstPhi() - row * myData.cellSizePhi + myData.cellSizePhi / 2.0 );
+				vRepresentativePoint[j].setLambda( myData.gCoorPair.getFirstLambda() + col * myData.cellSizeLambda - myData.cellSizeLambda / 2.0 );
+				j++;
 			}
+		}
+		// 保存
+		{
+			// 保存ファイル名
+			const std::string fileName = "circlePoints.xml";
+			// 保存ファイル先のディレクトリのmakefileからの相対位置
+			const std::string fileDire = "./../Data/1_Cron/Other";
+			// 保存path
+			std::string fileRela = fileDire + "/" + fileName;
+			// create an empty property tree
+			boost::property_tree::ptree pt;
+
+			// create the root element
+			boost::property_tree::ptree& root = pt.put("table", "");
+
+			// add child elements
 			{
-				// 領域の確保
-				vValid.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.cellIsValid" ).begin();
-				itr_last = pt.get_child( "table.cellIsValid" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					std::size_t i = std::distance(itr_first, it);
-					vValid[i] = it->second.get<bool>("value");
+				for (int i = 0; i < numCircleDisplay; i++) {
+					boost::property_tree::ptree& child = root.add("data", "");
+					child.put("latitude", vRepresentativePoint[i].getPhi());
+					child.put("longitude", vRepresentativePoint[i].getLambda());
 				}
 			}
-			{
-				demandCircleRange.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.demandCircleRange" ).begin();
-				itr_last = pt.get_child( "table.demandCircleRange" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					// itはptree::value_typeのイテレータ
-					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
-					itr_first_c = it->second.get_child( "" ).begin();
-					itr_last_c = it->second.get_child( "" ).end();
-					std::size_t i = std::distance(itr_first, it);
-					std::size_t N = std::distance(itr_first_c, itr_last_c);
-					demandCircleRange[i].resize(N);
-					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
-						std::size_t j = std::distance(itr_first_c, it_c);
-						demandCircleRange[i][j] = it_c->second.get<int>("value");
-					}
-				}
-			}
-			{
-				vacantCircleRange.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.vacantCircleRange" ).begin();
-				itr_last = pt.get_child( "table.vacantCircleRange" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					// itはptree::value_typeのイテレータ
-					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
-					itr_first_c = it->second.get_child( "" ).begin();
-					itr_last_c = it->second.get_child( "" ).end();
-					std::size_t i = std::distance(itr_first, it);
-					std::size_t N = std::distance(itr_first_c, itr_last_c);
-					vacantCircleRange[i].resize(N);
-					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
-						std::size_t j = std::distance(itr_first_c, it_c);
-						vacantCircleRange[i][j] = it_c->second.get<int>("value");
-					}
-				}
-			}
-			{
-				demandCircleOccupancyRange.resize(numCell);
-				boost::property_tree::ptree::iterator itr_first, itr_last, it;
-				itr_first = pt.get_child( "table.demandCircleOccupancyRange" ).begin();
-				itr_last = pt.get_child( "table.demandCircleOccupancyRange" ).end();
-				for(it = itr_first; it != itr_last; ++it) {
-					// itはptree::value_typeのイテレータ
-					boost::property_tree::ptree::iterator itr_first_c, itr_last_c, it_c;
-					itr_first_c = it->second.get_child( "" ).begin();
-					itr_last_c = it->second.get_child( "" ).end();
-					std::size_t i = std::distance(itr_first, it);
-					std::size_t N = std::distance(itr_first_c, itr_last_c);
-					demandCircleOccupancyRange[i].resize(N);
-					for(it_c = itr_first_c; it_c != itr_last_c; ++it_c) {
-						std::size_t j = std::distance(itr_first_c, it_c);
-						demandCircleOccupancyRange[i][j] = it_c->second.get<int>("value");
-					}
-				}
+			// output
+			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
+		}
+	}else{
+		// 空のオブジェクトファイルの生成
+		try {
+			const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyCircle.xml");
+			boost::filesystem::path dst("./../Data/1_Cron/Other/circlePoints.xml");
+			boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
+		} catch (std::exception& e) {
+			std::cout << "failure!" << "\n";
+			// return EXIT_FAILURE;
+		}
+	}
+}
+
+void myDisplayVIndexNotLessThanThreshold(std::vector<int> &vIndexNotLessThanThreshold);
+void myDisplayVIndexNotLessThanThreshold(std::vector<int> &vIndexNotLessThanThreshold)
+{
+		std::cout << "需要数がしきい値以上あるセルの確認" << "\n";
+		int N = vIndexNotLessThanThreshold.size();
+		for (int i = 0; i < N; i++) {
+			std::cout << "[index]" << vIndexNotLessThanThreshold[i];
+		}
+		std::cout << "\n";
+}
+
+void myDisplayVIndexUnderThreshold(std::vector<int> &vIndexUnderThreshold);
+void myDisplayVIndexUnderThreshold(std::vector<int> &vIndexUnderThreshold)
+{
+		std::cout << "需要数がしきい値未満のセルの確認" << "\n";
+		int N = vIndexUnderThreshold.size();
+		for (int i = 0; i < N; i++) {
+			std::cout << "[index]" << vIndexUnderThreshold[i];
+		}
+		std::cout << "\n";
+}
+
+void mySaveMyData2( MyData2 &myData2, const std::string &fileName, const std::string &fileDire );
+void mySaveMyData2( MyData2 &myData2, const std::string &fileName, const std::string &fileDire )
+{
+	// 保存path
+	std::string fileRela = fileDire + "/" + fileName;
+	// create an empty property tree
+	boost::property_tree::ptree pt;
+
+	// create the root element
+	boost::property_tree::ptree& root = pt.put("table", "");
+
+	// add child elements
+	{
+		int N = myData2.vIndex.size();
+		{
+			boost::property_tree::ptree& child = root.put("vIndex", "");
+			for (int i = 0; i < N; i++) {
+				boost::property_tree::ptree& cchild = child.add("element", "");
+				cchild.put("value", myData2.vIndex[i]);
+				cchild.put("demand", myData2.vDemand[i]);
 			}
 		}
 	}
 
-	// // demandCircleRangeの確認
-	// {
-	// 	for (int i = 0; i < (int)demandCircleRange.size(); i++) {
-	// 		int N = demandCircleRange[i].size();
-	// 		if (N >= 2) {
-	// 			std::cout << "[" << i+1 << ", num = " << N-1 << "] : ";
-	// 			for (int j = 0; j < N; j++) {
-	// 				std::cout << demandCircleRange[i][j] << ", " ;
-	// 			}
-	// 			std::cout << "\n";
-	// 		}
-	// 	}
-	// }
+	// output
+	boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
+}
 
-    // 需要数を取得する
-	std::vector<int> vDemand(numCell, 0);
+int main(int argc, char *argv[])
+{
+    // argv[0] : ./Bin/main.out
+	// argv[1] : 4 (unsigned int 型のしきい値．circleDisplayThreshold)
+	// argv[2] : 1 (unsigned int 型のしきい値．minCircleKariDemand)
+	// argv[3] : 8 (unsigned int 型のしきい値．circleKariDemandThreshold)
+
+	// example of input at commandline : ./Bin/main.out 2 1 4
+
+	if (argc != 4) {
+		std::cout << "argc must be 4. failure!" << "\n";
+		return EXIT_FAILURE;
+	}
+
+	unsigned int circleDisplayThreshold = 0;
 	{
-		// currentTime.xmlを取得
-		boost::posix_time::ptime cTime;
-		{
-			boost::property_tree::ptree pt;
-			// 設定値読み込みファイル名
-			const std::string fileName = "currentTime.xml";
-			// 設定値読み込みファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/FromServer";
-			std::string fileRela = fileDire + "/" + fileName;
-			// read the xml file
-			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
-			{
-				// 文字列の取得
-				std::string timeStr = pt.get<std::string>("table.data.currentTime");
-				// 空文字の削除
-				boost::trim (timeStr);
-				// boost::posix_time::ptime 型に変換
-				cTime = boost::posix_time::time_from_string(timeStr);
-			}
+		int thresholdHoge = 0;
+		try
+        {
+			thresholdHoge = boost::lexical_cast<int>(argv[1]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		if (thresholdHoge < 0) {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
 		}
-		// data.xmlを取得
+		circleDisplayThreshold = thresholdHoge;
+	}
+
+	unsigned int minCircleKariDemand = 0;
+	{
+		int thresholdHoge = 0;
+		try
+        {
+			thresholdHoge = boost::lexical_cast<int>(argv[2]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		if (thresholdHoge < 0) {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		minCircleKariDemand = thresholdHoge;
+	}
+
+	unsigned int circleKariDemandThreshold = 0;
+	{
+		int thresholdHoge = 0;
+		try
+        {
+			thresholdHoge = boost::lexical_cast<int>(argv[3]);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
+        }
+		if (thresholdHoge < 0) {
+			std::cout << "argv[1](threshold) must be a type of unsigned int. failure!" << "\n";
+			return EXIT_FAILURE;
+		}
+		circleKariDemandThreshold = thresholdHoge;
+	}
+
+	// 0_2_Setからパラメータを受け取る
+	MyData myData;
+	{
+		// ファイル名
+		const std::string fileName = "inputDataFor1_Cron.xml";
+		// ディレクトリのmakefileからの相対位置
+		const std::string fileDire = "./../Data/0_2_Set/Other";
+		myData = myReadMyData( fileName, fileDire );
+	}
+
+	// // 表示
+	// myDisplayMyData(myData);
+
+	// // 表示
+	// myDisplayCircleIndex(myData.vDemandCountCircleIndex);
+
+    // // 表示
+	// myDisplayCircleIndex(myData.vVacantCountCircleIndex);
+
+	// // 表示
+	// myDisplayCircleIndex(myData.vFlagSetCircleIndex);
+
+	// 各セルの需要数を取得する
+	std::vector<int> vDemand(myData.numCell, 0);
+	{
+		// Data.xmlを取得
 		// create an empty property tree
 		boost::property_tree::ptree pt;
 		{
@@ -283,41 +525,6 @@ int main()
 			// read the xml file
 			boost::property_tree::read_xml(fileRela, pt, boost::property_tree::xml_parser::no_comments);
 		}
-		// CurrentTimeを丸める
-		{
-			cTime = roundPTime(cTime, discreteTimeWidth);
-		}
-		// データ抽出条件の計算
-		std::vector<boost::posix_time::ptime> vCTimeStart;
-		std::vector<boost::posix_time::ptime> vCTimeEnd;
-		{
-			int N = displayDate.size();
-			// ベクトルの要素の追加
-			{
-				vCTimeStart.reserve(N);
-				vCTimeEnd.reserve(N);
-			}
-			// 値の登録
-			{
-				// displayTimeFrom(=-2)はdiscreteTimeWidth(=2)何個分(=-1)か
-				int numPre = round(displayTimeFrom / (double)discreteTimeWidth);
-				// displayTimeTo(=4)はdiscreteTimeWidth(=2)何個分(=2)か
-				int numPost = round(displayTimeTo / (double)discreteTimeWidth);
-				for (int i = 0; i < N; i++) {
-					vCTimeStart[i] = cTime + ( - boost::gregorian::days(displayDate[i]) );
-					vCTimeStart[i] += boost::posix_time::seconds( numPre * discreteTimeWidth * 60 - discreteTimeWidth * 30 );
-					vCTimeEnd[i] = cTime + ( - boost::gregorian::days(displayDate[i]) );
-					vCTimeEnd[i] += boost::posix_time::seconds( numPost * discreteTimeWidth * 60 + discreteTimeWidth * 30 );
-					// std::cout << "[" << vCTimeStart[i] << "]" << "[" << vCTimeEnd[i] << "]" << "\n";
-				}
-			}
-		}
-
-		// メモ
-		// table-date-startDate
-		//           -startPoint-latitude
-		//                      -longitude
-
 		// ptを解析していき需要数をカウントしていく
 		{
 			boost::property_tree::ptree::iterator itr_first, itr_last, it;
@@ -328,52 +535,28 @@ int main()
 				GeographicCoordinate gCoorHoge;
 				gCoorHoge.setPhi( it->second.get<double>("startPoint.latitude") );
 				gCoorHoge.setLambda( it->second.get<double>("startPoint.longitude") );
-				int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
-				int col = calculateColFromLongitudes( gCoorHoge.getLambda(), gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
-				int index = calculateIndexFromRowCol( row, col, numRow, numCol );
+				int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), myData.gCoorPair.getFirstPhi(), myData.gCoorPair.getSecondPhi(), myData.cellSizePhi );
+				int col = calculateColFromLongitudes( gCoorHoge.getLambda(), myData.gCoorPair.getFirstLambda(), myData.gCoorPair.getSecondLambda(), myData.cellSizeLambda );
+				int index = calculateIndexFromRowCol( row, col, myData.numRow, myData.numCol );
 				// 範囲外だとindex = 0になる
 				if( index != 0 ) {
+					int i = index-1;
 					// 有効なセルかどうか
-					bool isValid = vValid[index-1];
+					bool isValid = myData.vIsValid[i];
 					if (isValid) {
-						// startDateを取得する
-						std::string sTimeStr = it->second.get<std::string>("startDate");
-						// 空文字の除去
-						boost::trim (sTimeStr);
-						// boost::posix_time::ptime 型に変換
-						boost::posix_time::ptime sTime = boost::posix_time::time_from_string(sTimeStr);
-						// Does there exist i s.t. vTimeStart[i] <= sTime < vTimeEnd[i]?
-						bool exists = false;
-						{
-							int N = displayDate.size();
-							for (int i = 0; i < N; i++) {
-								exists = ( ( vCTimeStart[i] <= sTime ) && ( sTime < vCTimeEnd[i] ) );
-								if (exists) {
-									break;
-								}
-							}
-						}
-						if (exists) {
-							// 需要数のカウントアップ
-							vDemand[index - 1]++;
-						}
+						// 需要数のカウントアップ
+						vDemand[i]++;
 					}
 				}
 			}
 		}
 	}
 
-	// std::cout << "総需要数 : " << std::accumulate(vDemand.begin(), vDemand.end(), 0.0) << std::endl
-		;
-	// std::cout << "需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vDemand[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [demand]" << vDemand[i] << "\n";
-	// 	}
-	// }
+	// // 表示
+    // myDisplayVDemand(vDemand);
 
 	// 空車数を取得する
-	std::vector<int> vVacantTaxi(numCell, 0);
+	std::vector<int> vVacantTaxi(myData.numCell, 0);
 	{
 		// taxiPositions.xmlを取得
 		// create an empty property tree
@@ -408,15 +591,16 @@ int main()
 					GeographicCoordinate gCoorHoge;
 					gCoorHoge.setPhi( it->second.get<double>("position.latitude") );
 					gCoorHoge.setLambda( it->second.get<double>("position.longitude") );
-					int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), gCoorNW.getPhi(), gCoorSE.getPhi(), cellSizePhi );
-					int col = calculateColFromLongitudes( gCoorHoge.getLambda(), gCoorNW.getLambda(), gCoorSE.getLambda(), cellSizeLambda );
-					int index = calculateIndexFromRowCol( row, col, numRow, numCol );
+					int row = calculateRowFromLatitudes( gCoorHoge.getPhi(), myData.gCoorPair.getFirstPhi(), myData.gCoorPair.getSecondPhi(), myData.cellSizePhi );
+					int col = calculateColFromLongitudes( gCoorHoge.getLambda(), myData.gCoorPair.getFirstLambda(), myData.gCoorPair.getSecondLambda(), myData.cellSizeLambda );
+					int index = calculateIndexFromRowCol( row, col, myData.numRow, myData.numCol );
 					// 範囲外だとindex = 0になる
 					if( index != 0 ) {
+						int i = index - 1;
 						// 有効なセルかどうか
-						bool isValid = vValid[index-1];
+						bool isValid = myData.vIsValid[i];
 						if (isValid) {
-							vVacantTaxi[index - 1]++;
+							vVacantTaxi[i]++;
 						}
 					}
 				}
@@ -424,304 +608,149 @@ int main()
 		}
 	}
 
-	// std::cout << "総空車数 : " << std::accumulate(vVacantTaxi.begin(), vVacantTaxi.end(), 0.0) << std::endl;
-	// std::cout << "需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vVacantTaxi[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [vacant]" << vVacantTaxi[i] << "\n";
-	// 	}
-	// }
+	// // 表示
+	// myDisplayVVacantTaxi(vVacantTaxi);
 
 	// 有効な各セルでサークル内の需要数と空車数を取得
-	std::vector<int> vDemandCircle(numCell, 0);
-	std::vector<int> vVacantTaxiCircle(numCell, 0);
+	std::vector<int> vDemandCircle(myData.numCell, 0);
+	std::vector<int> vVacantTaxiCircle(myData.numCell, 0);
 	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				int N1 = demandCircleRange[i].size();
-				int N2 = vacantCircleRange[i].size();
-				for (int j = 1; j < N1; j++) {
-					vDemandCircle[i] += vDemand[demandCircleRange[i][j] - 1];
+		for (int i = 0; i < myData.numCell; i++) {
+			if (myData.vIsValid[i]) {
+				{
+					int M = myData.vDemandCountCircleIndex[i].size();
+					for (int j = 1; j < M; j++) {
+						int indexCount = myData.vDemandCountCircleIndex[i][j];
+						vDemandCircle[i] += vDemand[indexCount - 1];
+					}
 				}
-				for (int j = 1; j < N2; j++) {
-					vVacantTaxiCircle[i] += vVacantTaxi[vacantCircleRange[i][j] - 1];
+				{
+					int M = myData.vVacantCountCircleIndex[i].size();
+					for (int j = 1; j < M; j++) {
+						int indexCount = myData.vVacantCountCircleIndex[i][j];
+						vVacantTaxiCircle[i] += vVacantTaxi[indexCount - 1];
+					}
 				}
 			}
 		}
 	}
 
-	// std::cout << "サークル需要数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vDemandCircle[i] >= 2) {
-	// 		std::cout << "[index]" << i+1 << ", [demand]" << vDemandCircle[i] << "\n";
-	// 	}
-	// }
+	// // 表示
+	// myDisplayVDemandCircle(vDemandCircle);
 
-	// std::cout << "サークル空車数の確認" << "\n";
-	// for (int i = 0; i < numCell; i++) {
-	// 	if (vVacantTaxiCircle[i] >= 1) {
-	// 		std::cout << "[index]" << i+1 << ", [vacant]" << vVacantTaxiCircle[i] << "\n";
-	// 	}
-	// }
+	// // 表示
+	// myDisplayVVacantTaxiCircle(vVacantTaxiCircle);
 
-	// threshold以上の需要を持つvDemandCircleのindexと需要数のペアを生成し小さい順に並べる
-	std::vector<PairIndexDemand> vDemandIndexNotLessThanThreshold;
+	// vDemandCircleから需要数がcircleDisplayThreshold以上あるものを取り出してきて大きい順に並べ替える．
+	std::vector<PairIndexDemand> vDemandIndexNotLessThanCircleDisplayThreshold;
 	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				if (vDemandCircle[i] >= threshold) {
+		for (int i = 0; i < myData.numCell; i++) {
+			if (myData.vIsValid[i]) {
+				if (vDemandCircle[i] >= (int)circleDisplayThreshold) {
 					PairIndexDemand pairHoge;
 					pairHoge.index = i + 1;
 					pairHoge.demand = vDemandCircle[i];
-					vDemandIndexNotLessThanThreshold.push_back(pairHoge);
+					vDemandIndexNotLessThanCircleDisplayThreshold.push_back(pairHoge);
 				}
 			}
 		}
 		// 需要に関してソート
 		{
 			std::vector<PairIndexDemand>::iterator it, itr_first, itr_last;
-			itr_first = vDemandIndexNotLessThanThreshold.begin();
-			itr_last = vDemandIndexNotLessThanThreshold.end();
+			itr_first = vDemandIndexNotLessThanCircleDisplayThreshold.begin();
+			itr_last = vDemandIndexNotLessThanCircleDisplayThreshold.end();
 			sort(itr_first, itr_last, MyNotLessDefinition());
 		}
 	}
-	// // 確認
-	// for (int i = 0; i < (int)vDemandIndexNotLessThanThreshold.size(); i++) {
-	// 	std::cout << "[index] : " << vDemandIndexNotLessThanThreshold[i].index << " [demand] : " << vDemandIndexNotLessThanThreshold[i].demand << "\n";
-	// }
 
-	int numPossibleCircle = vDemandIndexNotLessThanThreshold.size();
-	if (numPossibleCircle == 0) {
-		{
-			// 空のオブジェクトファイルの生成
-			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyCirclePosition.xml");
-				boost::filesystem::path dst("./../Data/1_Cron/Other/circlePoints.xml");
-				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-			} catch (std::exception& e) {
-				std::cout << "failure!" << "\n";
-				return EXIT_FAILURE;
-			}
-			// 空のArrayデータの生成
-			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyIndexArray.xml");
-				boost::filesystem::path dst("./../Data/1_Cron/Other/indexUnderThresholdKari.xml");
-				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-			} catch (std::exception& e) {
-				std::cout << "failure!" << "\n";
-				return EXIT_FAILURE;
-			}
-			// 空のArrayデータの生成
-			try {
-				const boost::filesystem::path src("./../Data/0_2_Set/Other/emptyIndexArray.xml");
-				boost::filesystem::path dst("./../Data/1_Cron/Other/indexNotLessThanThresholdKari.xml");
-				boost::filesystem::copy_file(src, dst, boost::filesystem::copy_option::overwrite_if_exists);
-			} catch (std::exception& e) {
-				std::cout << "failure!" << "\n";
-				return EXIT_FAILURE;
-			}
-		}
-		return EXIT_SUCCESS;
-	}
+	// サークルを描画するかどうか決めるフラグ配列の準備
+	std::vector<bool> vCircleDisplayFlag((int)vDemandIndexNotLessThanCircleDisplayThreshold.size(), false);
 
-	// vDemandIndexNotLessThanThresholdの間引きをする
 	// 需要サークルのフラグ
-	std::vector<bool> demandCircleRangeFlag(numCell, false);
+	std::vector<bool> vDemandCircleFlag(myData.numCell, false);
 	// サークルの重なりを防ぐためのフラグ
-	std::vector<bool> demandCircleOccupancyRangeFlag(numCell, false);
+	std::vector<bool> vFlagSetCircleIndexFlag(myData.numCell, false);
+
+	// vDemandIndexNotLessThanCircleDisplayThresholdの中で描画する円を決定する．
+	int numCircleDisplay = 0;
 	{
-		auto itr = vDemandIndexNotLessThanThreshold.begin();
-		while (itr != vDemandIndexNotLessThanThreshold.end()) {
-			bool removeCondition = false;
-			{
-				// すでにdemandCircleOccupancyRangeFlagがtrueであればサークルを書かないのでremoveConditionをtrueにする
-				int indexCircleCenter = itr->index;
-				bool hasMarked = demandCircleOccupancyRangeFlag[indexCircleCenter - 1];
-				if (hasMarked) {
-					// 重なりがあるため削除
-					removeCondition = true;
-				}else{
-					// demandCircleRangeFlagの更新
-					{
-						int N = demandCircleRange[indexCircleCenter - 1].size();
-						for (int i = 1; i < N; i++) {
-							int markedIndex = demandCircleRange[indexCircleCenter - 1][i];
-							demandCircleRangeFlag[markedIndex - 1] = true;
-						}
-					}
-					// demandCircleOccupancyRangeFlagの更新
-					{
-						int N = demandCircleOccupancyRange[indexCircleCenter - 1].size();
-						for (int i = 1; i < N; i++) {
-							int markedIndex = demandCircleOccupancyRange[indexCircleCenter - 1][i];
-							demandCircleOccupancyRangeFlag[markedIndex - 1] = true;
-						}
-					}
-				}
-			}
-			if (removeCondition) {
-				itr = vDemandIndexNotLessThanThreshold.erase(itr);
-			}else{
-				itr++;
-			}
-		}
-	}
-
-	// demandCircleRangeFlagの保存
-	{
-		for (int i = 0; i < numCell; i++) {
-			if (vValid[i]) {
-				// 保存ファイル名
-				const std::string fileName = boost::lexical_cast<std::string>( i + 1 ) + ".xml";
-				// 保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/1_Cron/Other/IsOnCircle";
-				// 保存path
-				std::string fileRela = fileDire + "/" + fileName;
-				// create an empty property tree
-				boost::property_tree::ptree pt;
-
-				// create the root element
-				boost::property_tree::ptree& root = pt.put("table", "");
-
-				// add child elements
-				{
-					{
-						boost::property_tree::ptree& child = root.add("isOnCircle", "");
-						child.put("value", demandCircleRangeFlag[i]);
-					}
-				}
-
-				// output
-				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
-		}
-	}
-
-	// // 確認
-	// for (int i = 0; i < (int)vDemandIndexNotLessThanThreshold.size(); i++) {
-	// 	std::cout << "[index] : " << vDemandIndexNotLessThanThreshold[i].index << " [demand] : " << vDemandIndexNotLessThanThreshold[i].demand << "\n";
-	// }
-	// vDemandIndexNotLessThanThresholdに登録してるindexを位置情報に変換し，保存
-	{
-		int N = vDemandIndexNotLessThanThreshold.size();
-		std::vector<GeographicCoordinate> vRepresentativePoint(N);
+		int N = vDemandIndexNotLessThanCircleDisplayThreshold.size();
 		for (int i = 0; i < N; i++) {
-			int indexCircle = vDemandIndexNotLessThanThreshold[i].index;
-			int row = calculateRowFromIndex( indexCircle, numCol, numCell );
-			int col = calculateColFromIndex( indexCircle, numCol, numCell );
-			vRepresentativePoint[i].setPhi( gCoorNW.getPhi() - row * cellSizePhi + cellSizePhi / 2.0 );
-			vRepresentativePoint[i].setLambda( gCoorNW.getLambda() + col * cellSizeLambda - cellSizeLambda / 2.0 );
-		}
-		// 保存
-		{
-			// 保存ファイル名
-			const std::string fileName = "circlePoints.xml";
-			// 保存ファイル先のディレクトリのmakefileからの相対位置
-			const std::string fileDire = "./../Data/1_Cron/Other";
-			// 保存path
-			std::string fileRela = fileDire + "/" + fileName;
-			// create an empty property tree
-			boost::property_tree::ptree pt;
-
-			// create the root element
-			boost::property_tree::ptree& root = pt.put("table", "");
-
-			// add child elements
-			{
-				for (int i = 0; i < N; i++) {
-					boost::property_tree::ptree& child = root.add("data", "");
-					child.put("latitude", vRepresentativePoint[i].getPhi());
-					child.put("longitude", vRepresentativePoint[i].getLambda());
-				}
+			int indexCircleCenter = vDemandIndexNotLessThanCircleDisplayThreshold[i].index;
+			bool hasMarked = vFlagSetCircleIndexFlag[indexCircleCenter - 1];
+			if (!hasMarked) {
+				// 描画をする(vCircleDisplayFlag[i])
+				vCircleDisplayFlag[i] = true;
+				numCircleDisplay++;
+				// 需要サークル内の複数のindexのフラグをtrueにする(vDemandCircleFlag)
+				myUpdateVFlags(vDemandCircleFlag, myData.vDemandCountCircleIndex[indexCircleCenter - 1]);
+				// 円重複描画を防ぐためのサークル内の複数のindexのフラグをtrueにする(vFlagSetCircleIndexFlag)
+				myUpdateVFlags(vFlagSetCircleIndexFlag, myData.vFlagSetCircleIndex[indexCircleCenter - 1]);
 			}
-			// output
-			boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 		}
 	}
 
-	// indexUnderThresholdKari.xmlとindexNotLessThanThresholdKari.xmlの作成と保存
+	// // 表示
+	// myDisplayCirclePairIndexDemand(vDemandIndexNotLessThanCircleDisplayThreshold, vCircleDisplayFlag);
+
+	// vDemandCircleFlagの保存
+	mySaveVDemandCircleFlag(vDemandCircleFlag, myData.vIsValid);
+
+	// 描画するサークルの保存(numCircleDisplayがゼロのときは例外処理)
+	mySaveDisplayCircleInfo(vDemandIndexNotLessThanCircleDisplayThreshold, vCircleDisplayFlag, myData, numCircleDisplay);
+
+	// 需要数-空車数を仮需要数と呼ぶ．circleKariDemandThreshold以上の値をもつセルとcircleKariDemandThreshold未満のminCircleKariDemand以上の値を持つセルのindexの集合を求める
+	MyData2 myData2NotLessThanThreshold;
+    myData2NotLessThanThreshold.vIndex.reserve(numCircleDisplay+1);
+    myData2NotLessThanThreshold.vIndex.push_back(-1);
+    myData2NotLessThanThreshold.vDemand.reserve(numCircleDisplay+1);
+    myData2NotLessThanThreshold.vDemand.push_back(-1);
+	MyData2 myData2UnderThreshold;
+	myData2UnderThreshold.vIndex.reserve(numCircleDisplay+1);
+    myData2UnderThreshold.vIndex.push_back(-1);
+	myData2UnderThreshold.vDemand.reserve(numCircleDisplay+1);
+    myData2UnderThreshold.vDemand.push_back(-1);
 	{
-		std::vector<int> vKariDemandUnderThresholdKari;
-		std::vector<int> vKariDemandNotLessThanThresholdKari;
-		{
-			int N = vDemandIndexNotLessThanThreshold.size();
-			vKariDemandUnderThresholdKari.reserve(N+1);
-			vKariDemandUnderThresholdKari.push_back(-1);
-			vKariDemandNotLessThanThresholdKari.reserve(N+1);
-			vKariDemandNotLessThanThresholdKari.push_back(-1);
-		}
-		// theresholdKari以上の需要を持つセルとthresholdKari未満0より大きい需要を持つセルのindexの保存
-		{
-			int N = vDemandIndexNotLessThanThreshold.size();
-			for (int i = 0; i < N; i++) {
-				int indexCircleCenter = vDemandIndexNotLessThanThreshold[i].index;
-				int demandCircle = vDemandIndexNotLessThanThreshold[i].demand;
-				int vacantCircle = vVacantTaxiCircle[indexCircleCenter - 1];
-				int demandKariCircle = demandCircle - vacantCircle;
-				if (demandKariCircle >= thresholdKari) {
-					vKariDemandNotLessThanThresholdKari.push_back(indexCircleCenter);
-				}else if(demandKariCircle < thresholdKari && demandKariCircle > 0){
-					vKariDemandUnderThresholdKari.push_back(indexCircleCenter);
+		int N = vDemandIndexNotLessThanCircleDisplayThreshold.size();
+		for (int i = 0; i < N; i++) {
+			if (vCircleDisplayFlag[i]) {
+				int indexHoge = vDemandIndexNotLessThanCircleDisplayThreshold[i].index;
+				int demandHoge = vDemandIndexNotLessThanCircleDisplayThreshold[i].demand;
+				int vacantHoge = vVacantTaxiCircle[indexHoge - 1];
+				int kariDemand = demandHoge - vacantHoge;
+				if (kariDemand >= (int)circleKariDemandThreshold) {
+					myData2NotLessThanThreshold.vIndex.push_back(indexHoge);
+					myData2NotLessThanThreshold.vDemand.push_back(kariDemand);
+				}else if((kariDemand < (int)circleKariDemandThreshold) && (kariDemand > (int)minCircleKariDemand)) {
+					myData2UnderThreshold.vIndex.push_back(indexHoge);
+					myData2UnderThreshold.vDemand.push_back(kariDemand);
 				}
-			}
-			// indexNotLessThanThresholdKari.xmlに保存
-			{
-				// 保存ファイル名
-				const std::string fileName = "indexNotLessThanThresholdKari.xml";
-				// 保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/1_Cron/Other";
-				// 保存path
-				std::string fileRela = fileDire + "/" + fileName;
-				// create an empty property tree
-				boost::property_tree::ptree pt;
-
-				// create the root element
-				boost::property_tree::ptree& root = pt.put("table", "");
-
-				// add child elements
-				{
-					int N = vKariDemandNotLessThanThresholdKari.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vKariDemandNotLessThanThresholdKari[i]);
-					}
-				}
-
-				// output
-				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
-			}
-
-			// indexUnderThresholdKari.xmlに保存
-			{
-				// 設定値保存ファイル名
-				const std::string fileName = "indexUnderThresholdKari.xml";
-				// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
-				const std::string fileDire = "./../Data/1_Cron/Other";
-				// 保存path
-				std::string fileRela = fileDire + "/" + fileName;
-				// create an empty property tree
-				boost::property_tree::ptree pt;
-
-				// create the root element
-				boost::property_tree::ptree& root = pt.put("table", "");
-
-				// add child elements
-				{
-					int N = vKariDemandUnderThresholdKari.size();
-					for (int i = 0; i < N; i++) {
-						boost::property_tree::ptree& child = root.add("index", "");
-						child.put("value", vKariDemandUnderThresholdKari[i]);
-					}
-				}
-
-				// output
-				boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 			}
 		}
 	}
 
+	// // 表示
+	// myDisplayVIndexNotLessThanThreshold(myData2NotLessThanThreshold.vIndex);
 
+    // // 表示
+	// myDisplayVIndexUnderThreshold(myData2UnderThreshold.vIndex);
 
+	// indexNotLessThanThreshold.xmlに保存
+	{
+		// 設定値保存ファイル名
+		const std::string fileName = "indexNotLessThanThreshold.xml";
+		// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
+		const std::string fileDire = "./../Data/1_Cron/Other";
+		mySaveMyData2( myData2NotLessThanThreshold, fileName, fileDire );
+	}
 
+	// indexUnderThreshold.xmlに保存
+	{
+		// 設定値保存ファイル名
+		const std::string fileName = "indexUnderThreshold.xml";
+		// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
+		const std::string fileDire = "./../Data/1_Cron/Other";
+		mySaveMyData2( myData2UnderThreshold, fileName, fileDire );
+	}
     return EXIT_SUCCESS;
 }

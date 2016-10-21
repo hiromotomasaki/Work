@@ -844,6 +844,26 @@ void myCreateEmptyObject(const std::string &fileName, const std::string &fileDir
 	boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
 }
 
+void myCreateEmptyValue(const std::string &fileName, const std::string &fileDire);
+void myCreateEmptyValue(const std::string &fileName, const std::string &fileDire)
+{
+	// 保存path
+	std::string fileRela = fileDire + "/" + fileName;
+	// create an empty property tree
+	boost::property_tree::ptree pt;
+
+	// create the root element
+	boost::property_tree::ptree& root = pt.put("table", "");
+
+	// add child elements
+	{
+		root.put("value", -1);
+	}
+
+	// output
+	boost::property_tree::write_xml(fileRela, pt, std::locale(), boost::property_tree::xml_writer_make_settings<std::string>(' ', 2));
+}
+
 void myCreateInputDataFor1_Cron(MyData2 &myData2, std::vector<bool> &vIsValid, const std::string &fileName, const std::string &fileDire);
 void myCreateInputDataFor1_Cron(MyData2 &myData2, std::vector<bool> &vIsValid, const std::string &fileName, const std::string &fileDire)
 {
@@ -948,8 +968,8 @@ int main()
 	// --- ユーザー入力値  --- //
 	bool displayMyData = false;
 	bool displayMyData2 = false;
-	bool deleteOrCreateDirectory = true;
-	bool createMain = true;
+	bool deleteOrCreateDirectory = false;
+	bool createMain = false;
 	// ----------------------- //
 
 	// この関数で作成するデータを全削除．./../Data/0_2_Set/Otherのフォルダを作成．
@@ -1185,6 +1205,14 @@ int main()
 		// ディレクトリのmakefileからの相対位置
 		const std::string fileDire = "./../Data/0_2_Set/Other";
 		myCreateEmptyObject(fileName, fileDire);
+	}
+	// ./../Data/0_2_Set/Other/emptyValue.xml
+	{
+		// 保存ファイル名
+		const std::string fileName = "emptyValue.xml";
+		// ディレクトリのmakefileからの相対位置
+		const std::string fileDire = "./../Data/0_2_Set/Other";
+		myCreateEmptyValue(fileName, fileDire);
 	}
 	// ./../Data/0_2_Set/Other/inputDataFor1_Cron.xml
 	{

@@ -20,6 +20,8 @@
 #include "GeographicCoordinate.hpp"
 #include "coordinate.hpp"
 
+#include "GeographicCoordinatePair.hpp"
+
 #include <boost/property_tree/xml_parser.hpp> /* boost::property_tree::xml_parser::write_xml, boost::property_tree::xml_parser::read_xml */
 /* http://www.boost.org/doc/libs/1_61_0/doc/html/boost/property_tree/xml_parser/write_xml_idp197174048.html */
 #include <boost/filesystem.hpp> /* boost::filesystem::create_directories, -lboost_system -lboost_filesystemが必要 */
@@ -27,23 +29,18 @@
 #include <boost/lexical_cast.hpp> /* boost::lexical_cast<型> */
 /* http://www.kmonos.net/alang/boost/classes/lexical_cast.html */
 
-#include <boost/date_time/posix_time/posix_time.hpp>/* 時刻の読み書き */
-/* http://www.boost.org/doc/libs/1_61_0/doc/html/date_time/posix_time.html */
-#include <boost/algorithm/string.hpp> /* boost::trim */
-/* http://www.boost.org/doc/libs/1_61_0/boost/algorithm/string.hpp */
+// プログレス表示に必要
+#include <boost/progress.hpp>
+// 待ち時間
+#include <boost/date_time/posix_time/posix_time.hpp>
+// プログレス表示に必要
+#include <boost/thread/thread.hpp> 
+
+// #include <algorithm>
 
 namespace hiro {
 
 } // namespace hiro
-
-
-
-
-
-
-
-
-
 
 
 #endif // __HIRO_MAIN__

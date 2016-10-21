@@ -4,38 +4,28 @@
 
 特に使わない．
 ** Other
-*** InfoAboutValidCells
-**** 112
-***** Object
-****** 112
-******* dir1.xml
-indexTaxi=112の場所でdir1の方向に向かって走行しているときindexTarget=112を指す場合のオブジェクト情報
-******* dir9.xml
-indexTaxi=112の場所でdir9の方向に向かって走行しているときindexTarget=112を指す場合のオブジェクト情報
-****** 110.xml
-indexTaxi=112の場所でindexTarget=110を指す場合のオブジェクト情報
-***** SearchRange
-****** dir1
-indexTaxi=112の場所でdir1の方向に探査をするときの有効なindexTargetを距離が近い順に登録してある．
-****** dir9
-indexTaxi=112の場所でdir9の方向に探査をするときの有効なindexTargetを距離が近い順に登録してある．
-***** searchRange.xml
-indexTaxi=112の場所でdir1の方向に探査をするときの有効なindexTargetを距離が近い順に詳細情報が登録してある.
-*** InputDataFor1_Cron.xml
-1_Cronで受け取る設定値データ
-*** InputDataFor2_ForEachRequest.xml
-2_ForEachRequestで受け取る設定値データ
-*** IsValid
-**** 1.xml
-indexTaxi=1が有効なセルなのかtrue, falseで保存されている．
-*** baseMap.xml
-営業領域の基本情報
+*** InfoAboutCell/
+各セルの情報．
+*** base.xml
+設定ファイル．
+*** emptyCircle.xml
+空のサークル情報．
 *** emptyObject.xml
-空のオブジェクト情報
-*** emptyCirclePosition.xml
-空のサークル情報
+空のオブジェクト情報．
+*** emptyValue.xml
+空のValue情報．
+*** inputDataFor1_Cron.xml
+1_Cronで使うパラメータ
+*** inputDataFor2_ForEachRequest.xml
+1_ForEachRequestで使うパラメータ
 *** representativePoints.xml
-各セルの代表点の情報
+セルの代表点の情報．
+*** vDemandCountCircleIndex.xml
+需要をカウントするサークル情報．
+*** vFlagSetCircleIndex.xml
+フラグの更新範囲のサークル情報．
+*** vVacantCountCircleIndex.xml
+空車をカウントするサークル情報．
 
 * 実行前にすること
 ** フォルダの作成
@@ -43,16 +33,24 @@ indexTaxi=1が有効なセルなのかtrue, falseで保存されている．
 
 ** リンクを貼る
 必要な自作関数のリンクを貼る
-
 ** makefileへのリンクを貼る
 #+BEGIN_SRC sh
 [12:39:41]hiro@hiro-VirtualBox:0_2_Set$ pwd
-/home/hiro/Documents/Work/Taxi/Wakayama/Greedy/0_2_Set
+/home/hiro/Documents/Work/Taxi/Wakayama/Rational/0_2_Set
 [12:41:20]hiro@hiro-VirtualBox:0_2_Set$ ln -s ./makefile_hiromoto makefile
 #+END_SRC
 
 ** Source/main.cpp内で
-関数main内部のdisplayの値の設定
+
+以下の確認
+
+bool displayMyData = false;
+
+bool displayMyData2 = false;
+
+bool deleteOrCreateDirectory = true;
+
+bool createMain = true;
 
 * 実行手順
 #+BEGIN_SRC sh
