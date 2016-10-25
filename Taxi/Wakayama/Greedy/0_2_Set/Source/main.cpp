@@ -1080,8 +1080,8 @@ int main()
 							colTo = myData2.numCol;
 						}
 					}
-					for (int i1 = rowFrom; i1 < rowTo; i1++) {
-						for (int i2 = colFrom; i2 < colTo; i2++) {
+					for (int i1 = rowFrom; i1 <= rowTo; i1++) {
+						for (int i2 = colFrom; i2 <= colTo; i2++) {
 							int indexHoge = calculateIndexFromRowCol( i1, i2, myData2.numRow, myData2.numCol );
 							vIsValid[indexHoge - 1] = true;
 						}
@@ -1134,8 +1134,8 @@ int main()
 						check = checkRow && checkCol;
 					}
 					if (check) {
-						for (int i1 = rowFrom; i1 < rowTo; i1++) {
-							for (int i2 = colFrom; i2 < colTo; i2++) {
+						for (int i1 = rowFrom; i1 <= rowTo; i1++) {
+							for (int i2 = colFrom; i2 <= colTo; i2++) {
 								int indexHoge = calculateIndexFromRowCol( i1, i2, myData2.numRow, myData2.numCol );
 								vIsValid[indexHoge - 1] = false;
 							}

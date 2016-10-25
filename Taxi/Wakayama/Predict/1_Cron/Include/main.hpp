@@ -39,6 +39,12 @@
 #include <caffe/caffe.hpp>
 #include <caffe/layers/memory_data_layer.hpp>
 
+// serverとhiromotoのライブラリのバージョンが違うため
+#include <vector>
+#include <numeric>
+#include <string>
+#include <functional>
+
 namespace hiro {
 
 } // namespace hiro

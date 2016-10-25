@@ -260,6 +260,24 @@ void myDisplayVVacantTaxiCircle(std::vector<int> &vVacantTaxiCircle)
 	}
 }
 
+void myDisplayVDemandIndexNotLessThanCircleDisplayThreshold(std::vector<PairIndexDemand> &vDemandIndexNotLessThanCircleDisplayThreshold, MyData &myData);
+void myDisplayVDemandIndexNotLessThanCircleDisplayThreshold(std::vector<PairIndexDemand> &vDemandIndexNotLessThanCircleDisplayThreshold, MyData &myData)
+{
+	std::cout << "サークルでカウントした需要数の確認" << "\n";
+	int N = vDemandIndexNotLessThanCircleDisplayThreshold.size();
+	for (int i = 0; i < N; i++) {
+		int index = vDemandIndexNotLessThanCircleDisplayThreshold[i].index;
+		int demand = vDemandIndexNotLessThanCircleDisplayThreshold[i].demand;
+		// indexを位置情報に変換する
+		int row = calculateRowFromIndex( index, myData.numCol, myData.numCell );
+		int col = calculateColFromIndex( index, myData.numCol, myData.numCell );
+		GeographicCoordinate gCoorHoge;
+		gCoorHoge.setPhi( myData.gCoorPair.getFirstPhi() - row * myData.cellSizePhi + myData.cellSizePhi / 2.0 );
+		gCoorHoge.setLambda( myData.gCoorPair.getFirstLambda() + col * myData.cellSizeLambda - myData.cellSizeLambda / 2.0 );
+		std::cout << "[index]" << index << ", [numDemand]" << demand << ", [latitude]" << gCoorHoge.getPhi() << ", [longitude]" << gCoorHoge.getLambda() << "\n";
+	}
+}
+
 void myUpdateVFlags(std::vector<bool> &vFlag, std::vector<int> &vIndex);
 void myUpdateVFlags(std::vector<bool> &vFlag, std::vector<int> &vIndex)
 {
@@ -662,6 +680,9 @@ int main(int argc, char *argv[])
 			sort(itr_first, itr_last, MyNotLessDefinition());
 		}
 	}
+
+	// // サークルの需要数の確認
+    // myDisplayVDemandIndexNotLessThanCircleDisplayThreshold(vDemandIndexNotLessThanCircleDisplayThreshold, myData);
 
 	// サークルを描画するかどうか決めるフラグ配列の準備
 	std::vector<bool> vCircleDisplayFlag((int)vDemandIndexNotLessThanCircleDisplayThreshold.size(), false);

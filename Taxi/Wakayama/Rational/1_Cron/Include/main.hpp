@@ -36,6 +36,13 @@
 // プログレス表示に必要
 #include <boost/thread/thread.hpp> 
 
+// serverとhiromotoのライブラリのバージョンが違うため
+#include <vector>
+#include <numeric>
+#include <string>
+#include <functional>
+
+
 namespace hiro {
 
 } // namespace hiro
