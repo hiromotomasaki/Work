@@ -147,6 +147,7 @@ void mySaveMyData2( MyData2 &myData2, const std::string &fileName, const std::st
 		int N = myData2.vIndex.size();
 		{
 			boost::property_tree::ptree& child = root.put("vIndex", "");
+// #pragma omp parallel for
 			for (int i = 0; i < N; i++) {
 				boost::property_tree::ptree& cchild = child.add("element", "");
 				cchild.put("value", myData2.vIndex[i]);
@@ -261,6 +262,7 @@ int main(int argc, char *argv[])
 	myData2UnderThreshold.vDemand.reserve(myData.numCell+1);
     myData2UnderThreshold.vDemand.push_back(-1);
 	{
+// #pragma omp parallel for
 		for (int i = 0; i < myData.numCell; i++) {
 			if (vDemand[i] >= (int)threshold) {
 				myData2NotLessThanThreshold.vIndex.push_back(i + 1);
@@ -295,5 +297,6 @@ int main(int argc, char *argv[])
 		const std::string fileDire = "./../Data/1_Cron/Other";
 		mySaveMyData2( myData2UnderThreshold, fileName, fileDire );
 	}
+
     return EXIT_SUCCESS;
 }

@@ -1118,8 +1118,8 @@ int main()
 	// --- ユーザー入力値  --- //
 	bool displayMyData = true;
 	bool displayMyData2 = true;
-	bool deleteOrCreateDirectory = false;
-	bool createMain = false;
+	bool deleteOrCreateDirectory = true;
+	bool createMain = true;
 	// ----------------------- //
 
 	// この関数で作成するデータを全削除．./../Data/0_2_Set/Otherのフォルダを作成．

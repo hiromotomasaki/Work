@@ -537,13 +537,13 @@ double myHokann(const double x, const double minX, const double maxX, const doub
 	double alpha = (x - minX) / (double)(maxX - minX);
 
 	double hoge1 = 1 / 3.0;
-	double hoge2= 2 / 3.0;
+	double hoge2 = 2 / 3.0;
 
 	double ret = 0;
 
 	if (alpha >= 0 && alpha < hoge1) {
 		ret = 200;
-	}else if (alpha >= hoge1 && alpha < alpha2) {
+	}else if (alpha >= hoge1 && alpha < hoge2) {
 		ret = 500;
 	}else{
 		ret = 1000;
@@ -981,8 +981,8 @@ int main()
 	// --- ユーザー入力値  --- //
 	bool displayMyData = false;
 	bool displayMyData2 = false;
-	bool deleteOrCreateDirectory = false;
-	bool createMain = false;
+	bool deleteOrCreateDirectory = true;
+	bool createMain = true;
 	// ----------------------- //
 
 	// この関数で作成するデータを全削除．./../Data/0_2_Set/Otherのフォルダを作成．

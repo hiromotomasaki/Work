@@ -343,7 +343,7 @@ void mySaveParameter(const MyData &myData, const std::string &fileName, const st
 int main()
 {
 	// --- ユーザー入力値  --- //
-	bool isTestArea = true;
+	bool isTestArea = false;
 	bool displayData = true;
 	// ----------------------- //
 

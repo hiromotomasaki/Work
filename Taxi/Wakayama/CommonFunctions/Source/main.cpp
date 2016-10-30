@@ -474,5 +474,12 @@ int main()
 	// test_8_coordinate_calculateTStationFromGCoor();
 	// test_9_coordinate_calculateTStationFromCCoor();
 	test_10_GeographicCoordinatePair();
+
+#ifdef _OPENMP
+	std::cout << "OpenMP" << "\n";
+#else
+	std::cout << "no use" << "\n";
+#endif
+
     return EXIT_SUCCESS;
 }

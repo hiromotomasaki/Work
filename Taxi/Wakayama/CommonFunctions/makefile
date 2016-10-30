@@ -54,7 +54,7 @@ PROGRAM := main.out
 # コンパイル時に環境変数に登録されていないディレクトリにあるヘッダーのディレクトリを書く
 INCLUDE_PATH := -I ./Include
 # コンパイル時のその他のオプション
-COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self -Wpointer-arith
+COMPILE_OPTION := -MMD -MP -O2 -std=c++11 -Wall -Wextra -g -pedantic -Winit-self -Wpointer-arith -fopenmp
 # ******************************* 説明 ****************************** #
 # -MMD : システムヘッダディレクトリ以外のヘッダーを調べコンパイルし*.dに依存関係を保存する
 # -MP : 依存するヘッダファイルを偽のターゲットとして追加する。

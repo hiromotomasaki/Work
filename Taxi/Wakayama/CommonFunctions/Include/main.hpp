@@ -22,6 +22,9 @@
 
 #include "GeographicCoordinatePair.hpp"
 
+#include <omp.h>
+#include <vector>
+
 namespace hiro {
 
 } // namespace hiro
