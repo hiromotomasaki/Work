@@ -563,7 +563,21 @@ bool myCheckDegreeRange(const double theta, const double thetaCri, const double 
 double myHokann(const double x, const double minX, const double maxX, const double yOfMinX, const double yOfMaxX);
 double myHokann(const double x, const double minX, const double maxX, const double yOfMinX, const double yOfMaxX) {
 	double alpha = (x - minX) / (double)(maxX - minX);
-	double ret = (1-alpha) * yOfMinX + alpha * yOfMaxX;
+
+	double hoge1 = 1 / 3.0;
+	double hoge2= 2 / 3.0;
+
+	double ret = 0;
+
+	if (alpha >= 0 && alpha < hoge1) {
+		ret = 200;
+	}else if (alpha >= hoge1 && alpha < alpha2) {
+		ret = 500;
+	}else{
+		ret = 1000;
+	}
+
+	// double ret = (1-alpha) * yOfMinX + alpha * yOfMaxX;
 	return ret;
 }
 
