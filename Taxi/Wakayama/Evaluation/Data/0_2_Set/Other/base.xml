@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<myData2>
+  <gCoorPair>
+    <gCoorFirst_>
+      <phi_>34.275080000000003</phi_>
+      <lambda_>135.13807399999999</lambda_>
+    </gCoorFirst_>
+    <gCoorSecond_>
+      <phi_>34.177662432155593</phi_>
+      <lambda_>135.24438449439995</lambda_>
+    </gCoorSecond_>
+  </gCoorPair>
+  <cellSizeMeter>200</cellSizeMeter>
+  <numRow>54</numRow>
+  <numCol>49</numCol>
+  <numCell>2646</numCell>
+  <numValidCell>1956</numValidCell>
+  <cellSizePhi>0.001804029034155737</cellSizePhi>
+  <cellSizeLambda>0.0021696019265298634</cellSizeLambda>
+</myData2>
