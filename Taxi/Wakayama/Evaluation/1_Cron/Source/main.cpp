@@ -137,6 +137,7 @@ void mySaveVData( std::vector<int> &v, const std::string &fileName, const std::s
 				boost::property_tree::ptree& child = root.add("data", "");
 				child.put("value", v[i]);
 			}
+			root.add("total", std::accumulate(v.begin(), v.end(), 0.0));
 		}
 	}
 

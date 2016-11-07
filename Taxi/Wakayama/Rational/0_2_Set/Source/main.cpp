@@ -571,7 +571,7 @@ double myHokann(const double x, const double minX, const double maxX, const doub
 
 	if (alpha >= 0 && alpha < hoge1) {
 		ret = 200;
-	}else if (alpha >= hoge1 && alpha < alpha2) {
+	}else if (alpha >= hoge1 && alpha < hoge2) {
 		ret = 500;
 	}else{
 		ret = 1000;
