@@ -21,6 +21,8 @@ struct MyData
 	int numCol;
 	// 営業領域の外枠内にあるセル数
 	int numCell;
+	// 営業領域の外枠内にある有効セル数
+	int numValidCell;
 	// セルの南北の緯度差
 	double cellSizePhi;
 	// セルの東西の経度差
@@ -64,6 +66,7 @@ MyData myReadMyData( const std::string &fileName, const std::string &fileDire )
 			ret.numRow = pt.get<int>( "myData2.numRow" );
 			ret.numCol = pt.get<int>( "myData2.numCol" );
 			ret.numCell = pt.get<int>( "myData2.numCell" );
+			ret.numValidCell = pt.get<int>( "myData2.numValidCell" );
 			ret.cellSizePhi = pt.get<double>( "myData2.cellSizePhi" );
 			ret.cellSizeLambda = pt.get<double>( "myData2.cellSizeLambda" );
 			{
@@ -103,6 +106,7 @@ void myDisplayMyData(MyData &myData)
 	std::cout << "myData.numRow : " << "[" << myData.numRow << "]" << "\n";
 	std::cout << "myData.numCol : " << "[" << myData.numCol << "]" << "\n";
 	std::cout << "myData.numCell : " << "[" << myData.numCell << "]" << "\n";
+	std::cout << "myData.numValidCell : " << "[" << myData.numValidCell << "]" << "\n";
 	std::cout << "myData.cellSizePhi : " << "[" << myData.cellSizePhi << "]" << "\n";
 	std::cout << "myData.cellSizeLambda : " << "[" << myData.cellSizeLambda << "]" << "\n";
 }
@@ -118,8 +122,8 @@ int getStep(const boost::posix_time::ptime &pTime)
 	return ret;
 }
 
-void mySaveVData( std::vector<int> &v, const std::string &fileName, const std::string &fileDire );
-void mySaveVData( std::vector<int> &v, const std::string &fileName, const std::string &fileDire )
+void mySaveVData( std::vector<int> &v, std::vector<double> &vPerCell, const std::string &fileName, const std::string &fileDire );
+void mySaveVData( std::vector<int> &v, std::vector<double> &vPerCell, const std::string &fileName, const std::string &fileDire )
 {
 	// 保存path
 	std::string fileRela = fileDire + "/" + fileName;
@@ -136,8 +140,10 @@ void mySaveVData( std::vector<int> &v, const std::string &fileName, const std::s
 			for (int i = 0; i < N; i++) {
 				boost::property_tree::ptree& child = root.add("data", "");
 				child.put("value", v[i]);
+				child.put("valuePerCell", vPerCell[i]);
 			}
 			root.add("total", std::accumulate(v.begin(), v.end(), 0.0));
+			root.add("totalPerCell", std::accumulate(vPerCell.begin(), vPerCell.end(), 0.0));
 		}
 	}
 
@@ -349,6 +355,8 @@ int main(int argc, char *argv[])
 	std::vector<int> vNumGotCustomerNearPins(numT, 0);
 	// ピン付近以外で
 	std::vector<int> vNumGotCustomerFarFromPins(numT, 0);
+	// ピンがしきい値以上あるセルの数(ただし，ピンがしきい値以上あるセルの周囲のセル(自身を含めて9つ)もカウントに含める．)
+	std::vector<int> vNumCellWithPin(numT, 0);
 	{
 		// evalData.xmlの読込
 		std::vector<DataFactor> dataFactorEval;
@@ -515,22 +523,118 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		int numCount = 9;
+		std::vector<int> v1(numCount, 0); // 行
+		std::vector<int> v2(numCount, 0); // 列
+		{
+			v1[0] = -1;
+			v2[0] = -1;
+			v1[1] = -1;
+			v2[1] = 0;
+			v1[2] = -1;
+			v2[2] = 1;
+			v1[3] = 0;
+			v2[3] = -1;
+			v1[4] = 0;
+			v2[4] = 0;
+			v1[5] = 0;
+			v2[5] = 1;
+			v1[6] = 1;
+			v2[6] = -1;
+			v1[7] = 1;
+			v2[7] = 0;
+			v1[8] = 1;
+			v2[8] = 1;
+		}
+
 		// dataFactorEvalを一つづつ比較していく
 		{
 			for (int i = 0; i < (int)dataFactorEval.size(); i++) {
 				int j = getStep(dataFactorEval[i].pTime);
-				int k = dataFactorEval[i].index - 1;
-				if (vNumPin[j][k] >= myCommandData.threshold) {
+				int indexDemand = dataFactorEval[i].index;
+				bool check = false;
+				{
+					int rowCri = calculateRowFromIndex( indexDemand, myData.numCol, myData.numCell );
+					int colCri = calculateColFromIndex( indexDemand, myData.numCol, myData.numCell );
+					for (int k = 0; k < numCount; k++) {
+						int rowDelta = v1[k];
+						int colDelta = v2[k];
+						int row = rowCri + rowDelta;
+						int col = colCri + colDelta;
+						int indexHoge = calculateIndexFromRowCol( row, col, myData.numRow, myData.numCol );
+						if (indexHoge != 0) {
+							bool isValidCell = myData.vIsValid[indexHoge - 1];
+							if (isValidCell) {
+								if (vNumPin[j][indexHoge - 1] >= myCommandData.threshold) {
+									check = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+				if (check) {
 					vNumGotCustomerNearPins[j]++;
 				}else{
 					vNumGotCustomerFarFromPins[j]++;
 				}
 			}
 		}
+
+		// vNumPin[i][j]を見る（iステップのとき，セルjで立っているピンの数）．jでfor文を回してthreshold以上の値を持っていればvNumCellWithPin[i]をインクリメントする．
+		{
+			for (int i = 0; i < numT; i++) {
+				std::vector<bool> v1(myData.numCell, false);
+				for (int j = 0; j < myData.numCell; j++) {
+					// 有効なセルかどうか
+					bool isValidCell = myData.vIsValid[j];
+					if (isValidCell) {
+						int rowCri = calculateRowFromIndex( j+1, myData.numCol, myData.numCell );
+						int colCri = calculateColFromIndex( j+1, myData.numCol, myData.numCell );
+						for (int k = 0; k < numCount; k++) {
+							int rowDelta = v1[k];
+							int colDelta = v2[k];
+							int row = rowCri + rowDelta;
+							int col = colCri + colDelta;
+							int indexHoge = calculateIndexFromRowCol( row, col, myData.numRow, myData.numCol );
+							if (indexHoge != 0) {
+								bool isValidCellHoge = myData.vIsValid[indexHoge - 1];
+								if (isValidCellHoge) {
+									if (vNumPin[i][indexHoge - 1] >= myCommandData.threshold) {
+										v1[indexHoge - 1] = true;
+									}
+								}
+							}
+						}
+					}
+				}
+				vNumCellWithPin[i] = (int)std::count(v1.begin(), v1.end(), true);
+			}
+		}
+	}
+
+	// ピン付近で(PerCell)
+	std::vector<double> vNumGotCustomerPerCellNearPins(numT, 0);
+	// ピン付近以外で(PerCell)
+	std::vector<double> vNumGotCustomerPerCellFarFromPins(numT, 0);
+	{
+		for (int i = 0; i < numT; i++) {
+			if (vNumCellWithPin[i] != 0) {
+				vNumGotCustomerPerCellNearPins[i] = vNumGotCustomerNearPins[i] / (double)vNumCellWithPin[i];
+			}
+			int hoge = myData.numValidCell - vNumCellWithPin[i];
+			if (hoge != 0) {
+				vNumGotCustomerPerCellFarFromPins[i] = vNumGotCustomerFarFromPins[i] / (double)hoge;
+			}
+		}
 	}
 
 	std::cout <<  "ピンの近くの総計 : " << std::accumulate(vNumGotCustomerNearPins.begin(), vNumGotCustomerNearPins.end(), 0.0) << "\n";
 	std::cout <<  "ピンの近く以外の総計 : " << std::accumulate(vNumGotCustomerFarFromPins.begin(), vNumGotCustomerFarFromPins.end(), 0.0) << "\n";
+
+	std::cout <<  "ピンの近くの総計(PerCell) : " << std::accumulate(vNumGotCustomerPerCellNearPins.begin(), vNumGotCustomerPerCellNearPins.end(), 0.0) << "\n";
+	std::cout <<  "ピンの近く以外の総計(PerCell) : " << std::accumulate(vNumGotCustomerPerCellFarFromPins.begin(), vNumGotCustomerPerCellFarFromPins.end(), 0.0) << "\n";
+
 	// 保存
 	{
 		{
@@ -538,14 +642,14 @@ int main(int argc, char *argv[])
 			const std::string fileName = "vNumGotCustomerNearPins.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
 			const std::string fileDire = "./../Data/1_Cron/Other";
-			mySaveVData(vNumGotCustomerNearPins, fileName, fileDire);
+			mySaveVData(vNumGotCustomerNearPins, vNumGotCustomerPerCellNearPins, fileName, fileDire);
 		}
 		{
 			// 設定値保存ファイル名
 			const std::string fileName = "vNumGotCustomerFarFromPins.xml";
 			// 設定値保存ファイル先のディレクトリのmakefileからの相対位置
 			const std::string fileDire = "./../Data/1_Cron/Other";
-			mySaveVData(vNumGotCustomerFarFromPins, fileName, fileDire);
+			mySaveVData(vNumGotCustomerFarFromPins, vNumGotCustomerPerCellFarFromPins, fileName, fileDire);
 		}
 	}
     return EXIT_SUCCESS;
