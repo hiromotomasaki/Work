@@ -454,6 +454,8 @@ int main(int argc, char *argv[])
 								dataFactorHoge.id = it->second.get<int>("id");
 								dataFactorHoge.index = index;
 								dataFactorPins.push_back(dataFactorHoge);
+							}else{
+								gCoorHoge.print();
 							}
 						}
 					}
@@ -523,28 +525,44 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		int numCount = 9;
+		// int numCount = 9;
+		// std::vector<int> v1(numCount, 0); // 行
+		// std::vector<int> v2(numCount, 0); // 列
+		// {
+		// 	v1[0] = -1;
+		// 	v2[0] = -1;
+		// 	v1[1] = -1;
+		// 	v2[1] = 0;
+		// 	v1[2] = -1;
+		// 	v2[2] = 1;
+		// 	v1[3] = 0;
+		// 	v2[3] = -1;
+		// 	v1[4] = 0;
+		// 	v2[4] = 0;
+		// 	v1[5] = 0;
+		// 	v2[5] = 1;
+		// 	v1[6] = 1;
+		// 	v2[6] = -1;
+		// 	v1[7] = 1;
+		// 	v2[7] = 0;
+		// 	v1[8] = 1;
+		// 	v2[8] = 1;
+		// }
+
+		int numCount = 5;
 		std::vector<int> v1(numCount, 0); // 行
 		std::vector<int> v2(numCount, 0); // 列
 		{
 			v1[0] = -1;
-			v2[0] = -1;
-			v1[1] = -1;
-			v2[1] = 0;
-			v1[2] = -1;
-			v2[2] = 1;
+			v2[0] = 0;
+			v1[1] = 0;
+			v2[1] = -1;
+			v1[2] = 0;
+			v2[2] = 0;
 			v1[3] = 0;
-			v2[3] = -1;
-			v1[4] = 0;
+			v2[3] = 1;
+			v1[4] = 1;
 			v2[4] = 0;
-			v1[5] = 0;
-			v2[5] = 1;
-			v1[6] = 1;
-			v2[6] = -1;
-			v1[7] = 1;
-			v2[7] = 0;
-			v1[8] = 1;
-			v2[8] = 1;
 		}
 
 		// dataFactorEvalを一つづつ比較していく

@@ -92,13 +92,13 @@ MyData mySetParameter(bool isTestArea)
 				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.284311, 135.183871, 34.140970, 135.278189 ) );
 				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.217739, 135.265546, 34.141232, 135.311170 ) );
 				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.297741, 135.241681, 34.223232, 135.339878 ) );
-				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.223232, 135.339878, 34.150343, 135.192901 ) );
+				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.281825, 135.130379, 34.150343, 135.192901 ) );
 				ret.gCoorPairAdd.push_back( GeographicCoordinatePair( 34.296332, 135.061091, 34.224480, 135.140605 ) );
 			}
 			// 削除する営業領域
 			{
 				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( -1, -1, -1, -1 ) );
-				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( 34.224480, 135.140605, 34.216726, 135.090817 ) );
+				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( 34.260126, 135.035527, 34.216726, 135.090817 ) );
 				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( 34.251027, 135.085241, 34.217182, 135.098910 ) );
 				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( 34.303788, 135.083578, 34.278084, 135.142001 ) );
 				ret.gCoorPairRemove.push_back( GeographicCoordinatePair( 34.301980, 135.236779, 34.287886, 135.294815 ) );

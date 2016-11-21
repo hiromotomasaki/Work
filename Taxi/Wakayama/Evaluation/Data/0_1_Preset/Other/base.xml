@@ -2,33 +2,63 @@
 <myData>
   <gCoorPair>
     <gCoorFirst_>
-      <phi_>34.275080000000003</phi_>
-      <lambda_>135.13807399999999</lambda_>
+      <phi_>34.296332</phi_>
+      <lambda_>135.061091</lambda_>
     </gCoorFirst_>
     <gCoorSecond_>
-      <phi_>34.178565999999996</phi_>
-      <lambda_>135.242616</lambda_>
+      <phi_>34.143422999999999</phi_>
+      <lambda_>135.33989500000001</lambda_>
     </gCoorSecond_>
   </gCoorPair>
   <gCoorPairAdd>
     <element>
       <gCoorFirst_>
-        <phi_>34.276499000000001</phi_>
-        <lambda_>135.177899</lambda_>
+        <phi_>34.284311000000002</phi_>
+        <lambda_>135.18387100000001</lambda_>
       </gCoorFirst_>
       <gCoorSecond_>
-        <phi_>34.184814000000003</phi_>
-        <lambda_>135.23626400000001</lambda_>
+        <phi_>34.140970000000003</phi_>
+        <lambda_>135.278189</lambda_>
       </gCoorSecond_>
     </element>
     <element>
       <gCoorFirst_>
-        <phi_>34.271675000000002</phi_>
-        <lambda_>135.146657</lambda_>
+        <phi_>34.217739000000002</phi_>
+        <lambda_>135.265546</lambda_>
       </gCoorFirst_>
       <gCoorSecond_>
-        <phi_>34.182541999999998</phi_>
-        <lambda_>135.19060200000001</lambda_>
+        <phi_>34.141232000000002</phi_>
+        <lambda_>135.31117</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.297741000000002</phi_>
+        <lambda_>135.241681</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.223232000000003</phi_>
+        <lambda_>135.339878</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.281824999999998</phi_>
+        <lambda_>135.130379</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.150342999999999</phi_>
+        <lambda_>135.19290100000001</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.296332</phi_>
+        <lambda_>135.061091</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.22448</phi_>
+        <lambda_>135.14060499999999</lambda_>
       </gCoorSecond_>
     </element>
   </gCoorPairAdd>
@@ -45,22 +75,92 @@
     </element>
     <element>
       <gCoorFirst_>
-        <phi_>34.276781999999997</phi_>
-        <lambda_>135.129233</lambda_>
+        <phi_>34.260126</phi_>
+        <lambda_>135.035527</lambda_>
       </gCoorFirst_>
       <gCoorSecond_>
-        <phi_>34.242164000000002</phi_>
-        <lambda_>135.16253499999999</lambda_>
+        <phi_>34.216726000000001</phi_>
+        <lambda_>135.09081699999999</lambda_>
       </gCoorSecond_>
     </element>
     <element>
       <gCoorFirst_>
-        <phi_>34.200859000000001</phi_>
-        <lambda_>135.19386399999999</lambda_>
+        <phi_>34.251027000000001</phi_>
+        <lambda_>135.085241</lambda_>
       </gCoorFirst_>
       <gCoorSecond_>
-        <phi_>34.174944000000004</phi_>
-        <lambda_>135.22107199999999</lambda_>
+        <phi_>34.217182000000001</phi_>
+        <lambda_>135.09890999999999</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.303787999999997</phi_>
+        <lambda_>135.08357799999999</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.278084</phi_>
+        <lambda_>135.14200099999999</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.30198</phi_>
+        <lambda_>135.23677900000001</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.287886</phi_>
+        <lambda_>135.294815</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.235599999999998</phi_>
+        <lambda_>135.30404999999999</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.217238000000002</phi_>
+        <lambda_>135.348713</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.225734000000003</phi_>
+        <lambda_>135.28366700000001</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.203704999999999</phi_>
+        <lambda_>135.320705</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.163086</phi_>
+        <lambda_>135.27953600000001</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.132187999999999</phi_>
+        <lambda_>135.327012</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.180745999999999</phi_>
+        <lambda_>135.29675399999999</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.157178000000002</phi_>
+        <lambda_>135.329913</lambda_>
+      </gCoorSecond_>
+    </element>
+    <element>
+      <gCoorFirst_>
+        <phi_>34.180979999999998</phi_>
+        <lambda_>135.10940600000001</lambda_>
+      </gCoorFirst_>
+      <gCoorSecond_>
+        <phi_>34.143054999999997</phi_>
+        <lambda_>135.16983099999999</lambda_>
       </gCoorSecond_>
     </element>
   </gCoorPairRemove>
